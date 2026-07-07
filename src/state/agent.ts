@@ -102,7 +102,7 @@ class AgentStore extends Store {
 
   setCurrent(id: string | null): void {
     this.currentExecId = id
-    this.notify()
+    this.flushSync()
   }
 }
 

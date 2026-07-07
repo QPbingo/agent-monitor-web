@@ -16,6 +16,7 @@ export async function sendPrompt(
   timeoutMinutes = 10,
   workspaceId?: number | null,
 ): Promise<PromptResponse> {
+  if (!sessionId) throw new Error('Session ID is required to send a prompt')
   return request<PromptResponse>(
     `/api/agent/${agentType}/sessions/${encodeURIComponent(sessionId)}/prompt`,
     {

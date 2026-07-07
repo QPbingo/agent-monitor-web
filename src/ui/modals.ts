@@ -107,6 +107,20 @@ export function closeModal(): void {
   if (overlay) overlay.style.display = 'none'
 }
 
+// Wire Escape key globally — closes any open modal or dropdown.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return
+  const overlay = document.getElementById('modal-overlay')
+  if (overlay && overlay.style.display !== 'none') {
+    closeModal()
+    return
+  }
+  // Also close workspace / user dropdowns
+  document.getElementById('ws-selector-dropdown')?.classList.remove('open')
+  document.getElementById('user-dropdown')?.classList.remove('open')
+  document.getElementById('user-backdrop')?.classList.remove('open')
+})
+
 async function doCreate(type: 'workspace' | 'project' | 'topic', parentId: number): Promise<void> {
   const name = (document.getElementById('modal-name') as HTMLInputElement)?.value.trim() ?? ''
   if (!name) { toast.warn('Name is required'); return }

@@ -65,6 +65,7 @@ export class SSEManager {
   private isLeader = false
   private disposed = false
   private closeRetries = 0
+  private retryCooldown: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
     this.initBroadcastChannel()
@@ -141,10 +142,9 @@ export class SSEManager {
     try {
       this.es = new EventSource(url, { withCredentials: true })
     } catch {
-      // EventSource undefined in some restricted environments — surface to
-      // the user and stop retrying.
+      // EventSource undefined in some restricted environments.
       sseStatusBus.set('disconnected')
-      this.dispatch({ type: 'agent_error', error: 'EventSource unsupported', __auth: true } as SSEEvent)
+      this.dispatch({ type: 'agent_error', error: 'EventSource unsupported' } as SSEEvent)
       return
     }
 
@@ -156,6 +156,7 @@ export class SSEManager {
 
     this.es.onmessage = (e) => {
       this.resetDeadTimer()
+      this.closeRetries = 0  // reset on successful message receipt
       try {
         const event = JSON.parse(e.data) as SSEEvent
         this.dispatch(event)
@@ -173,7 +174,14 @@ export class SSEManager {
         this.closeRetries = (this.closeRetries || 0) + 1
         if (this.closeRetries >= 3) {
           sseStatusBus.set('disconnected')
-          this.dispatch({ type: 'agent_error', error: 'sse_closed', __auth: true } as SSEEvent)
+          if (this.es) { this.es.close(); this.es = null }
+          this.dispatch({ type: 'agent_error', error: 'sse_connection_lost' } as SSEEvent)
+          // Schedule a cooldown recovery: reset retry counter after 30s so
+          // a later manual reconnect (e.g. user clicks "Retry") doesn't start
+          // with exhausted retries (BUG-004).
+          this.retryCooldown = setTimeout(() => {
+            this.closeRetries = 0
+          }, 30_000)
           return
         }
         sseStatusBus.set('connecting')
@@ -191,7 +199,12 @@ export class SSEManager {
     if (this.deadTimer) clearTimeout(this.deadTimer)
     this.deadTimer = setTimeout(() => {
       // No traffic for DEAD_TIMEOUT_MS — force reconnect.
-      if (this.es) this.es.close()
+      // Capture + null the EventSource reference before close() so the old
+      // ES's async onerror callback doesn't read this.es after it's already
+      // been replaced by openEventSource() (BUG-003: dead-timer race).
+      const old = this.es
+      this.es = null
+      if (old) old.close()
       this.openEventSource()
     }, DEAD_TIMEOUT_MS)
   }
@@ -222,6 +235,7 @@ export class SSEManager {
   close(): void {
     this.disposed = true
     this.clearDeadTimer()
+    if (this.retryCooldown) { clearTimeout(this.retryCooldown); this.retryCooldown = null }
     if (this.leaderHeartbeat) clearInterval(this.leaderHeartbeat)
     if (this.followerWait) clearTimeout(this.followerWait)
     if (this.es) this.es.close()

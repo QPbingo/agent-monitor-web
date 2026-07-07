@@ -44,17 +44,23 @@ export async function request<T>(
       ...options,
     })
   } catch (e) {
-    // Network failure / CORS / daemon down. Surface to the user so silent
-    // `catch { ignore }` patterns upstream don't hide real outages.
-    toast.error('Network error — is the daemon running on :9101?')
+    // Network failure / CORS / daemon down. Suppress toast for auth endpoints
+    // (me/register/login/logout) — restoreSession calls me() on page load and a
+    // missing daemon should show the login form, not a scary network error.
+    if (!path.startsWith('/api/auth/')) {
+      toast.error('Network error — is the daemon running on :9101?')
+    }
     throw e
   }
 
   if (res.status === 204) return undefined as T
   if (res.status === 401) {
-    // Distinguish "scalar 401 on a web route" (real session loss) from
-    // machine-only endpoints (those never go through this client).
-    emitUnauthorized()
+    // Auth endpoints (/api/auth/login, /api/auth/register) return 401 for
+    // invalid credentials — not session loss. Don't emit the global
+    // unauthorized event; let the caller surface the real error message.
+    if (!path.startsWith('/api/auth/')) {
+      emitUnauthorized()
+    }
     throw new HTTPError(401, 'Session expired')
   }
   if (!res.ok) {

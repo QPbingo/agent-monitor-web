@@ -12,13 +12,13 @@ class AuthStore extends Store {
   setUser(user: User | null): void {
     this.user = user
     this.authed = user !== null
-    this.notify()
+    this.flushSync()  // immediate — login/logout must update UI synchronously
   }
 
   clear(): void {
     this.user = null
     this.authed = false
-    this.notify()
+    this.flushSync()
   }
 }
 

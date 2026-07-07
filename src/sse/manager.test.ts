@@ -71,22 +71,28 @@ describe('SSEManager', () => {
     expect(es.readyState).toBe(2)
   })
 
-  it('dispatches auth-failure after 3 CLOSED errors (SSE-F03, constraint D, with retry)', async () => {
+  it('dispatches connection-lost error after 3 CLOSED errors (SSE-F03, with retry)', async () => {
     const mgr = new SSEManager()
     const handler = vi.fn()
     mgr.on(handler)
     mgr.connect()
     await new Promise((r) => setTimeout(r, 50))
     const es = MockEventSource.instances[0]
-    // First two CLOSED events should trigger retries, not auth failure.
+    // First two CLOSED events should trigger retries, not error dispatch.
     es.readyState = 2
     es.onerror?.()
     expect(handler).not.toHaveBeenCalled()
     es.onerror?.()
     expect(handler).not.toHaveBeenCalled()
-    // Third CLOSED event Should dispatch auth failure.
+    // Third CLOSED event should dispatch connection_lost (not auth failure — the
+    // REST API client handles real 401s; SSE connection loss is a network issue).
     es.onerror?.()
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ __auth: true }))
+    expect(handler).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'agent_error',
+      error: 'sse_connection_lost',
+    }))
+    // EventSource should be closed after exhausting retries.
+    expect(es.readyState).toBe(2)
     mgr.close()
   })
 })

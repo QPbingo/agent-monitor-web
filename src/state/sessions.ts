@@ -37,6 +37,7 @@ export type SessionStatusFilter = 'all' | SessionStatus | 'claude' | 'opencode' 
 
 class SessionsStore extends Store {
   sessions: Record<string, Session> = {}
+  snapshotReceived = false  // true after first SSE snapshot (even if empty)
   currentFilter: SessionStatusFilter = 'all'
   agentTypeFilter: string = ''
   selectedSessionKey: string | null = null  // '' = all agent types
@@ -58,6 +59,7 @@ class SessionsStore extends Store {
         this.sessions = {}
         const list = (event.sessions as Session[]) ?? []
         for (const s of list) this.sessions[s.session_key] = s
+        this.snapshotReceived = true
         this.notify()
         break
       }
@@ -98,12 +100,12 @@ class SessionsStore extends Store {
 
   setFilter(f: SessionStatusFilter): void {
     this.currentFilter = f
-    this.notify()
+    this.flushSync()  // user action — immediate feedback
   }
 
   setAgentTypeFilter(t: string): void {
     this.agentTypeFilter = t
-    this.notify()
+    this.flushSync()
   }
 
   setDraftInput(key: string, value: string): void {
@@ -112,45 +114,45 @@ class SessionsStore extends Store {
 
   setTimelineSearch(key: string, value: string): void {
     this.timelineSearch[key] = value
-    this.notify()
+    this.flushSync()
   }
 
   setTimelineTurnFilter(key: string, value: string): void {
     this.timelineTurnFilter[key] = value
-    this.notify()
+    this.flushSync()
   }
 
   toggleCard(key: string): void {
     this.expandedCards[key] = !this.expandedCards[key]
-    this.notify()
+    this.flushSync()
   }
 
   toggleTurn(key: string, turnIdx: number): void {
     const id = `${key}_turn_${turnIdx}`
     this.expandedTurns[id] = !this.expandedTurns[id]
-    this.notify()
+    this.flushSync()
   }
 
   toggleToolGroup(key: string, turnIdx: number, entryIdx: number): void {
     const id = `${key}_${turnIdx}_${entryIdx}`
     this.expandedToolGroups[id] = !this.expandedToolGroups[id]
-    this.notify()
+    this.flushSync()
   }
 
   toggleToolDetail(id: string): void {
     this.expandedToolGroups[id] = !this.expandedToolGroups[id]
-    this.notify()
+    this.flushSync()
   }
 
   toggleEntryPayload(key: string, turnIdx: number, entryIdx: number): void {
     const id = `${key}_${turnIdx}_${entryIdx}`
     this.expandedPayloads[id] = !this.expandedPayloads[id]
-    this.notify()
+    this.flushSync()
   }
 
   togglePayload(key: string): void {
     this.expandedPayloads[key] = !this.expandedPayloads[key]
-    this.notify()
+    this.flushSync()
   }
 
   // filteredList applies the current status filter + selected-topic/story

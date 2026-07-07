@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Monitor - 赛博朋克像素风预览</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN SYSTEM TOKENS
+   ============================================================ */
+:root {
+  --bg: #050510;
+  --card-bg: #0A0A1A;
+  --muted-bg: #0E0E20;
+  --input-bg: #080818;
+  --border: rgba(0,240,255,0.15);
+  --border-hairline: rgba(255,255,255,0.04);
+  --border-light: rgba(255,255,255,0.10);
+
+  --neon-cyan:    #00F0FF;
+  --neon-purple:  #C570FF;
+  --neon-magenta: #FF1A75;
+  --neon-green:   #00FF66;
+  --neon-orange:  #FFAA00;
+  --neon-blue:    #44BBFF;
+
+  --cyan-glow:    0 0 12px rgba(0,240,255,0.50), 0 0 40px rgba(0,240,255,0.15);
+  --purple-glow:  0 0 12px rgba(197,112,255,0.50), 0 0 40px rgba(197,112,255,0.15);
+  --magenta-glow: 0 0 12px rgba(255,26,117,0.50), 0 0 40px rgba(255,26,117,0.15);
+  --green-glow:   0 0 12px rgba(0,255,102,0.50), 0 0 40px rgba(0,255,102,0.15);
+  --orange-glow:  0 0 12px rgba(255,170,0,0.50), 0 0 40px rgba(255,170,0,0.15);
+
+  --text-primary:   #F0F0FA;
+  --text-secondary: #A0A5C0;
+  --text-tertiary:  #6E7398;
+
+  /* Typography — 4-tier system */
+  --font-pixel: 'Press Start 2P', monospace;   /* UI chrome: logo, headers, buttons */
+  --font-ui:    'VT323', monospace;             /* UI labels: pills, stat labels, tags */
+  --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, sans-serif;  /* content: messages, tree entries */
+  --font-mono:  'JetBrains Mono', 'SF Mono', monospace;  /* data: keys, PIDs, code */
+
+  /* Pixel effects */
+  --pixel-border-light: #15E0FF;
+  --pixel-border-dark:  #004A55;
+  --pixel-shadow: 3px 3px 0;
+
+  /* CRT effect */
+  --crt-scanline: rgba(0,0,0,0.07);
+
+  --space-1:8px; --space-2:12px; --space-3:16px; --space-4:24px; --space-5:32px;
+  --sidebar-width: 280px;
+  --header-height: 64px;
+}
+
+[data-theme="light"] {
+  --bg: #F0EFFF;
+  --card-bg: #FFFFFF;
+  --muted-bg: #F5F3FF;
+  --input-bg: #EDEBF8;
+  --border: rgba(0,150,180,0.18);
+  --border-hairline: rgba(0,0,0,0.06);
+  --border-light: rgba(0,0,0,0.10);
+
+  --neon-cyan:    #0099AA;
+  --neon-purple:  #7733BB;
+  --neon-magenta: #D42A6A;
+  --neon-green:   #1A9944;
+  --neon-orange:  #D08800;
+  --neon-blue:    #2266DD;
+
+  --cyan-glow:    0 0 0 2px rgba(0,153,170,0.30), 0 2px 8px rgba(0,153,170,0.12);
+  --purple-glow:  0 0 0 2px rgba(119,51,187,0.30), 0 2px 8px rgba(119,51,187,0.12);
+  --magenta-glow: 0 0 0 2px rgba(212,42,106,0.30), 0 2px 8px rgba(212,42,106,0.12);
+  --green-glow:   0 0 0 2px rgba(26,153,68,0.30), 0 2px 8px rgba(26,153,68,0.12);
+  --orange-glow:  0 0 0 2px rgba(208,136,0,0.30), 0 2px 8px rgba(208,136,0,0.12);
+
+  --text-primary:   #1A1A22;
+  --text-secondary: #555566;
+  --text-tertiary:  #888899;
+
+  --crt-scanline: rgba(120,100,200,0.04);
+  --pixel-border-light: #00BBDD;
+  --pixel-border-dark:  #004466;
+  --pixel-shadow: 2px 2px 0;
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+input, select, textarea { font-family: var(--font-sans); }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+/* ── Ambient neon pools (dark mode) ── */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(0,240,255,0.10) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 15%, rgba(197,112,255,0.09) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(255,26,117,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 10% 85%, rgba(0,255,102,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(0,240,255,0.03) 0%, transparent 70%);
+}
+[data-theme="light"] body::before { background: none; }
+
+/* ── CRT scanline overlay ── */
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+  background: repeating-linear-gradient(
+    0deg,
+    var(--crt-scanline),
+    var(--crt-scanline) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.5;
+}
+
+/* ============================================================
+   TOP NAVIGATION
+   ============================================================ */
+.top-nav {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  height:var(--header-height);
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display:flex; align-items:center; padding:0 var(--space-4);
+  gap:var(--space-3);
+}
+
+.logo {
+  font-family:var(--font-pixel); font-size:10px;
+  color:var(--neon-cyan); text-shadow:var(--cyan-glow);
+  letter-spacing:2px; line-height:1.3;
+  box-shadow: 2px 0 0 var(--pixel-border-dark), 4px 0 0 var(--pixel-border-light);
+  padding:6px 12px; margin-right:var(--space-4);
+  transition: text-shadow 200ms;
+}
+.logo:hover { text-shadow: 0 0 20px rgba(0,240,255,0.7), 0 0 60px rgba(0,240,255,0.2); }
+.logo span { color:var(--neon-magenta); }
+
+.nav-item {
+  font-family:var(--font-ui); font-size:20px; color:var(--text-tertiary);
+  padding:4px 12px; cursor:pointer; transition:all 150ms;
+  border:none; background:none; position:relative;
+}
+.nav-item:hover { color:var(--neon-purple); text-shadow:0 0 8px rgba(197,112,255,0.4); }
+.nav-item.active {
+  color:var(--neon-cyan);
+  box-shadow: 0 2px 0 var(--neon-cyan);
+}
+
+.nav-spacer { flex:1; }
+
+.theme-toggle {
+  font-family:var(--font-pixel); font-size:10px; color:var(--text-secondary);
+  background:var(--muted-bg); border:1px solid var(--border);
+  padding:8px 12px; cursor:pointer;
+  box-shadow: var(--pixel-shadow) var(--pixel-border-dark);
+  transition:all 150ms;
+}
+.theme-toggle:hover { color:var(--neon-orange); box-shadow:var(--pixel-shadow) var(--neon-orange); }
+
+.user-avatar {
+  width:36px; height:36px;
+  background:var(--neon-purple);
+  font-family:var(--font-pixel); font-size:10px; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 0 12px rgba(197,112,255,0.3);
+  border: 2px solid var(--pixel-border-light);
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.main-layout {
+  display:flex; margin-top:var(--header-height);
+  height:calc(100vh - var(--header-height));
+  position:relative; z-index:1;
+}
+
+/* ============================================================
+   SIDEBAR — Purple zone
+   ============================================================ */
+.sidebar {
+  width:var(--sidebar-width); flex-shrink:0;
+  background:var(--muted-bg);
+  border-right:1px solid rgba(197,112,255,0.18);
+  padding:var(--space-3); overflow-y:auto;
+}
+
+.sidebar-section { margin-bottom:var(--space-4); }
+
+/* Section header — pixel font for UI chrome */
+.sidebar-label {
+  font-family:var(--font-pixel); font-size:9px; color:var(--neon-purple);
+  text-transform:uppercase; letter-spacing:2px; margin-bottom:var(--space-1);
+  padding:6px 8px;
+  text-shadow: 0 0 8px rgba(197,112,255,0.30);
+}
+
+/* Tree entries — readable sans-serif for actual directory/file names */
+.tree-item {
+  font-family:var(--font-sans); font-size:13px; font-weight:500;
+  color:var(--text-secondary);
+  padding:6px 12px; cursor:pointer; border-left:3px solid transparent;
+  transition:all 150ms;
+}
+.tree-item:hover { background:rgba(0,240,255,0.05); color:var(--text-primary); }
+.tree-item.active {
+  color:var(--neon-cyan); border-left-color:var(--neon-cyan);
+  box-shadow: inset 0 0 20px rgba(0,240,255,0.04);
+}
+.tree-item.child { padding-left:32px; font-size:12px; color:var(--text-tertiary); }
+
+/* ── Tree item icon dots ── */
+.tree-item .dot { display:inline-block; width:6px; height:6px; margin-right:8px; flex-shrink:0; }
+.tree-item .dot.project { background:var(--neon-purple); box-shadow:0 0 6px var(--neon-purple); }
+.tree-item .dot.service { background:var(--neon-cyan); box-shadow:0 0 6px var(--neon-cyan); }
+
+/* Side nav items (Sessions/Dashboard) — pixel font for nav chrome */
+.side-nav-item {
+  font-family:var(--font-pixel); font-size:10px; color:var(--text-tertiary);
+  padding:8px 12px; cursor:pointer; border-left:3px solid transparent;
+  display:flex; align-items:center; gap:8px;
+  text-transform:uppercase; letter-spacing:1px;
+  transition:all 150ms;
+}
+.side-nav-item:hover { color:var(--text-primary); background:rgba(197,112,255,0.06); }
+.side-nav-item.active {
+  color:var(--neon-purple); border-left-color:var(--neon-purple);
+  background:rgba(197,112,255,0.08);
+  text-shadow:0 0 8px rgba(197,112,255,0.30);
+}
+
+.tree-separator {
+  height:4px; margin:8px 6px 16px;
+  background: repeating-linear-gradient(90deg,
+    var(--neon-purple) 0px, var(--neon-purple) 8px,
+    transparent 8px, transparent 16px);
+  opacity:0.3;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+.main-content {
+  flex:1; padding:var(--space-4); overflow-y:auto;
+  display:flex; flex-direction:column; gap:var(--space-4);
+}
+
+/* ============================================================
+   STAT CARDS — with HUD corner brackets
+   ============================================================ */
+.stats-row {
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:var(--space-3);
+}
+
+.stat-card {
+  background:var(--card-bg); border:1px solid var(--border);
+  padding:var(--space-3);
+  box-shadow: var(--pixel-shadow) var(--pixel-border-dark);
+  position:relative; overflow:hidden;
+  transition: all 200ms;
+}
+.stat-card:hover { border-color: var(--neon-cyan); }
+
+/* HUD corner brackets — top-left */
+.stat-card::before {
+  content:''; position:absolute; top:0; left:0; width:14px; height:14px;
+  border-top:2px solid var(--neon-cyan); border-left:2px solid var(--neon-cyan);
+  opacity: 0.7;
+}
+/* HUD corner brackets — bottom-right */
+.stat-card::after {
+  content:''; position:absolute; bottom:0; right:0; width:14px; height:14px;
+  border-bottom:2px solid var(--neon-purple); border-right:2px solid var(--neon-purple);
+  opacity: 0.7;
+}
+
+.stat-label {
+  font-family:var(--font-ui); font-size:20px; color:var(--text-tertiary);
+  text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;
+}
+
+.stat-value {
+  font-family:var(--font-pixel); font-size:22px; color:var(--neon-cyan);
+  text-shadow:0 0 8px rgba(0,240,255,0.4);
+}
+.stat-value.green  { color:var(--neon-green); text-shadow:0 0 8px rgba(0,255,102,0.4); }
+.stat-value.magenta { color:var(--neon-magenta); text-shadow:0 0 8px rgba(255,26,117,0.4); }
+.stat-value.orange { color:var(--neon-orange); text-shadow:0 0 8px rgba(255,170,0,0.4); }
+
+.stat-sub {
+  font-family:var(--font-mono); font-size:11px; color:var(--text-tertiary); margin-top:6px;
+}
+
+/* ============================================================
+   SESSION PANEL
+   ============================================================ */
+.session-panel {
+  display:flex; gap:var(--space-3); flex:1; min-height:0;
+}
+
+/* ── Session list ── */
+.session-list {
+  width:420px; flex-shrink:0; background:var(--card-bg);
+  border:1px solid var(--border); overflow-y:auto;
+}
+
+/* Header — pixel font for UI chrome */
+.list-header {
+  font-family:var(--font-pixel); font-size:10px; color:var(--neon-cyan);
+  padding:var(--space-2) var(--space-3); border-bottom:1px solid var(--border);
+  letter-spacing:1px; display:flex; justify-content:space-between;
+  background:var(--muted-bg);
+  box-shadow: 0 2px 0 var(--pixel-border-dark);
+  text-shadow: 0 0 8px rgba(0,240,255,0.2);
+}
+
+.list-count {
+  font-family:var(--font-mono); color:var(--neon-cyan); font-size:11px;
+}
+
+/* Filter pills — VT323 for UI labels */
+.filter-row {
+  display:flex; gap:6px; padding:8px 12px; overflow-x:auto;
+  border-bottom:1px solid var(--border-hairline);
+}
+
+.filter-pill {
+  font-family:var(--font-ui); font-size:16px;
+  padding:2px 10px; border:1px solid var(--border);
+  background:transparent; color:var(--text-secondary);
+  cursor:pointer; white-space:nowrap; transition:all 150ms;
+  box-shadow: 2px 2px 0 transparent;
+}
+.filter-pill:hover { border-color:var(--neon-purple); color:var(--neon-purple); }
+.filter-pill.active {
+  border-color:var(--neon-cyan); color:var(--neon-cyan);
+  box-shadow: 2px 2px 0 var(--pixel-border-dark);
+  text-shadow:0 0 6px rgba(0,240,255,0.3);
+}
+
+/* Session rows — readable fonts for data */
+.session-row {
+  padding:var(--space-2) var(--space-3); border-bottom:1px solid var(--border-hairline);
+  cursor:pointer; transition:all 150ms;
+}
+.session-row:hover { background:rgba(0,240,255,0.04); }
+.session-row.selected {
+  background:rgba(0,240,255,0.06); border-left:3px solid var(--neon-cyan);
+}
+
+.session-key {
+  font-family:var(--font-mono); font-size:12px; color:var(--neon-cyan);
+  margin-bottom:3px;
+}
+.session-agent {
+  font-family:var(--font-sans); font-size:13px; color:var(--text-secondary);
+  font-weight: 500; margin-bottom:2px;
+}
+.session-time {
+  font-family:var(--font-mono); font-size:11px; color:var(--text-tertiary);
+}
+
+/* Status dots */
+.status-dot { display:inline-block; width:8px; height:8px; margin-right:6px; }
+.dot-active  { color:var(--neon-green); text-shadow:var(--green-glow); }
+.dot-idle    { color:var(--neon-orange); }
+.dot-error   { color:var(--neon-magenta); }
+
+/* ============================================================
+   DETAIL PANEL
+   ============================================================ */
+.detail-panel {
+  flex:1; background:var(--card-bg); border:1px solid var(--border);
+  padding:var(--space-4); overflow-y:auto; min-width:0;
+}
+
+/* Header — pixel font for section title */
+.detail-header {
+  font-family:var(--font-pixel); font-size:11px; color:var(--neon-cyan);
+  text-shadow:0 0 10px rgba(0,240,255,0.3); margin-bottom:var(--space-3);
+  padding-bottom:var(--space-2);
+  border-bottom:2px solid var(--border);
+}
+
+.detail-section { margin-bottom:var(--space-4); }
+
+/* Label — VT323 for UI labels */
+.detail-label {
+  font-family:var(--font-ui); font-size:18px; color:var(--text-tertiary);
+  text-transform:uppercase; margin-bottom:4px;
+}
+
+/* Value — mono for data */
+.detail-value {
+  font-family:var(--font-mono); font-size:12px; color:var(--text-primary);
+  background:var(--muted-bg); padding:8px 12px;
+  border-left:2px solid var(--neon-purple);
+  box-shadow: 2px 2px 0 var(--pixel-border-dark);
+}
+
+/* ============================================================
+   TIMELINE
+   ============================================================ */
+.timeline-item {
+  padding:var(--space-2) var(--space-3); border-left:2px solid var(--border);
+  margin-bottom:var(--space-2); position:relative;
+}
+.timeline-item::before {
+  content:''; position:absolute; left:-5px; top:14px;
+  width:8px; height:8px; border-radius:0;
+}
+.timeline-item.user { border-left-color:var(--neon-cyan); }
+.timeline-item.user::before { background:var(--neon-cyan); box-shadow:0 0 8px var(--neon-cyan); }
+.timeline-item.assistant { border-left-color:var(--neon-green); }
+.timeline-item.assistant::before { background:var(--neon-green); box-shadow:0 0 8px var(--neon-green); }
+.timeline-item.tool { border-left-color:var(--neon-orange); }
+.timeline-item.tool::before { background:var(--neon-orange); box-shadow:0 0 8px var(--neon-orange); }
+.timeline-item.error { border-left-color:var(--neon-magenta); }
+.timeline-item.error::before { background:var(--neon-magenta); box-shadow:0 0 8px var(--neon-magenta); }
+
+/* Turn type label — pixel font for event type badge */
+.turn-type {
+  font-family:var(--font-pixel); font-size:9px; color:var(--text-tertiary);
+  letter-spacing:0.5px;
+}
+/* Turn message — sans-serif for readability */
+.turn-message {
+  font-family:var(--font-sans); font-size:13px; color:var(--text-secondary);
+  line-height:1.6; margin-top:4px;
+}
+/* Code block — mono */
+.turn-code {
+  font-family:var(--font-mono); font-size:11px; color:var(--neon-cyan);
+  background:var(--input-bg); padding:8px 12px; margin-top:8px;
+  box-shadow: 2px 2px 0 var(--pixel-border-dark);
+  border-left: 2px solid var(--neon-cyan);
+}
+
+/* ============================================================
+   BUTTONS — pixel font
+   ============================================================ */
+.btn {
+  font-family:var(--font-pixel); font-size:10px; padding:10px 18px;
+  cursor:pointer; transition:all 150ms;
+  letter-spacing:1px; text-transform:uppercase;
+  box-shadow: var(--pixel-shadow) var(--pixel-border-dark);
+}
+.btn:active { transform: translate(1px, 1px); }
+
+.btn-primary {
+  background:var(--neon-cyan); color: var(--bg);
+  border:none; font-weight: 700;
+}
+.btn-primary:hover {
+  box-shadow: var(--pixel-shadow) var(--neon-cyan), 0 0 20px rgba(0,240,255,0.3);
+  transform:translate(-1px, -1px);
+}
+
+.btn-danger {
+  background:transparent; color:var(--neon-magenta);
+  border:2px solid var(--neon-magenta);
+}
+.btn-danger:hover {
+  box-shadow: var(--pixel-shadow) var(--neon-magenta);
+  text-shadow:0 0 10px rgba(255,26,117,0.5);
+}
+
+.btn-ghost {
+  background:transparent; color:var(--text-secondary);
+  border:1px solid var(--border);
+}
+.btn-ghost:hover { border-color:var(--neon-purple); color:var(--neon-purple); }
+
+/* ============================================================
+   AGENT PANEL (slide-out drawer)
+   ============================================================ */
+.agent-drawer {
+  position:fixed; right:0; top:var(--header-height); bottom:0;
+  width:360px; background:var(--card-bg); border-left:1px solid var(--border);
+  padding:var(--space-4); z-index:50; overflow-y:auto;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.4);
+}
+.agent-header {
+  font-family:var(--font-pixel); font-size:11px; color:var(--neon-purple);
+  text-shadow:0 0 12px rgba(197,112,255,0.3); margin-bottom:var(--space-3);
+}
+.agent-select {
+  font-family:var(--font-mono); font-size:13px; color:var(--text-primary);
+  background:var(--input-bg); border:1px solid var(--border);
+  padding:8px 12px; width:100%; margin-bottom:var(--space-2);
+  box-shadow: 2px 2px 0 var(--pixel-border-dark);
+}
+.agent-input {
+  font-family:var(--font-mono); font-size:12px; color:var(--text-primary);
+  background:var(--input-bg); border:1px solid var(--border);
+  padding:var(--space-2); width:100%; resize:vertical; min-height:80px;
+  box-shadow: 2px 2px 0 var(--pixel-border-dark);
+}
+.agent-input:focus { border-color:var(--neon-cyan); outline:none; box-shadow:2px 2px 0 var(--neon-cyan); }
+.agent-input::placeholder { color: var(--text-tertiary); opacity: 0.6; }
+
+.exec-item {
+  font-family:var(--font-mono); font-size:11px; color:var(--text-secondary);
+  padding:8px; border-bottom:1px solid var(--border-hairline);
+  cursor:pointer; transition:all 150ms;
+}
+.exec-item:hover { color:var(--neon-cyan); background:rgba(0,240,255,0.04); }
+.exec-item.running {
+  border-left:3px solid var(--neon-green);
+  color: var(--text-primary);
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast {
+  position:fixed; top:calc(var(--header-height) + var(--space-3)); right:var(--space-3);
+  z-index:300; background:var(--card-bg); border:1px solid var(--neon-green);
+  box-shadow: var(--green-glow), var(--pixel-shadow) var(--pixel-border-dark);
+  padding:var(--space-2) var(--space-3);
+  font-family:var(--font-ui); font-size:18px; color:var(--neon-green);
+}
+
+/* ============================================================
+   DEMO CONTROLS
+   ============================================================ */
+.demo-bar {
+  position:fixed; bottom:var(--space-3); right:var(--space-3); z-index:200;
+  display:flex; gap:8px; background:var(--card-bg); padding:8px;
+  border:1px solid var(--border);
+  box-shadow: var(--pixel-shadow) var(--pixel-border-dark);
+}
+.demo-bar button {
+  font-family:var(--font-pixel); font-size:9px; padding:6px 10px;
+  background:var(--muted-bg); border:1px solid var(--border);
+  color:var(--text-secondary); cursor:pointer; transition:all 150ms;
+}
+.demo-bar button:hover { color:var(--neon-cyan); border-color:var(--neon-cyan); }
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:var(--input-bg); }
+::-webkit-scrollbar-thumb { background:rgba(0,240,255,0.15); }
+::-webkit-scrollbar-thumb:hover { background:var(--neon-purple); }
+
+/* ── reduced motion ── */
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:0.01ms!important; transition-duration:0.01ms!important; }
+  body::after { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<nav class="top-nav">
+  <div class="logo">AGENT<span>//MON</span></div>
+  <button class="nav-item active">SESSIONS</button>
+  <button class="nav-item">DASHBOARD</button>
+  <div class="nav-spacer"></div>
+  <button class="theme-toggle" onclick="toggleTheme()">☽ MODE</button>
+  <div class="user-avatar">HK</div>
+</nav>
+
+<!-- ═══════════════ MAIN LAYOUT ═══════════════ -->
+<div class="main-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- Nav chrome — pixel font -->
+    <div class="side-nav-item active">
+      <span>◆</span> Sessions
+    </div>
+    <div class="side-nav-item">
+      <span>◆</span> Dashboard
+    </div>
+
+    <div class="tree-separator"></div>
+
+    <!-- Section chrome — pixel font -->
+    <div class="sidebar-label">Projects</div>
+
+    <!-- Tree entries — readable sans-serif for directory names -->
+    <div class="tree-item active"><span class="dot project"></span>agent-monitor</div>
+    <div class="tree-item child"><span class="dot service"></span>auth-service</div>
+    <div class="tree-item child"><span class="dot service"></span>api-gateway</div>
+    <div class="tree-item child"><span class="dot service"></span>session-daemon</div>
+    <div class="tree-item"><span class="dot project"></span>infrastructure</div>
+    <div class="tree-item child"><span class="dot service"></span>ci-cd-pipeline</div>
+    <div class="tree-item child"><span class="dot service"></span>monitoring</div>
+
+    <div class="sidebar-section" style="margin-top:var(--space-4)">
+      <div class="sidebar-label">Status</div>
+      <div class="tree-item" style="font-family:var(--font-mono);font-size:12px;">
+        <span class="status-dot dot-active">●</span> daemon :9101
+      </div>
+      <div class="tree-item" style="font-family:var(--font-mono);font-size:11px;color:var(--text-tertiary);">
+        <span class="status-dot dot-active">●</span> 3 active · 12 total
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Active Sessions</div>
+        <div class="stat-value green">12</div>
+        <div class="stat-sub">+3 from last hour</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Turns</div>
+        <div class="stat-value">847</div>
+        <div class="stat-sub">avg 4.2 per session</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Errors</div>
+        <div class="stat-value magenta">3</div>
+        <div class="stat-sub">2 resolved</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Uptime</div>
+        <div class="stat-value orange">14d 6h</div>
+        <div class="stat-sub">since last deploy</div>
+      </div>
+    </div>
+
+    <!-- Session panel -->
+    <div class="session-panel">
+
+      <!-- Session list -->
+      <div class="session-list">
+        <div class="list-header">
+          <span>SESSIONS</span>
+          <span class="list-count">203</span>
+        </div>
+        <div class="filter-row">
+          <button class="filter-pill active">ALL</button>
+          <button class="filter-pill">ACTIVE</button>
+          <button class="filter-pill">IDLE</button>
+          <button class="filter-pill">ERROR</button>
+          <button class="filter-pill">CLAUDE</button>
+          <button class="filter-pill">OPENCODE</button>
+        </div>
+
+        <div class="session-row selected">
+          <div class="session-key">sess_8f3a2c1d</div>
+          <div class="session-agent">claude · 127.0.0.1:52341</div>
+          <div class="session-time"><span class="status-dot dot-active">●</span> active · PID 28471 · 2m ago</div>
+        </div>
+        <div class="session-row">
+          <div class="session-key">sess_7e2b9a41</div>
+          <div class="session-agent">opencode · 127.0.0.1:52342</div>
+          <div class="session-time"><span class="status-dot dot-idle">●</span> idle · PID 29102 · 15m ago</div>
+        </div>
+        <div class="session-row">
+          <div class="session-key">sess_6d1a8c33</div>
+          <div class="session-agent">codex · 127.0.0.1:52343</div>
+          <div class="session-time"><span class="status-dot dot-error">●</span> error · PID 27845 · 1h ago</div>
+        </div>
+        <div class="session-row">
+          <div class="session-key">sess_5c0b7d22</div>
+          <div class="session-agent">claude · 10.0.1.5:52344</div>
+          <div class="session-time">stopped · PID 26530 · 3h ago</div>
+        </div>
+        <div class="session-row">
+          <div class="session-key">sess_4b9a6130</div>
+          <div class="session-agent">opencode · 10.0.1.5:52345</div>
+          <div class="session-time"><span class="status-dot dot-active">●</span> active · PID 31208 · 5h ago</div>
+        </div>
+      </div>
+
+      <!-- Detail panel -->
+      <div class="detail-panel">
+        <div class="detail-header">SESSION: sess_8f3a2c1d</div>
+
+        <div class="detail-section">
+          <div class="detail-label">Agent</div>
+          <div class="detail-value">claude · PID 28471 · 127.0.0.1:52341</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-label">Status</div>
+          <div class="detail-value" style="border-left-color:var(--neon-green)">
+            <span class="status-dot dot-active">●</span> active · last heartbeat 2m ago
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-label">Timeline</div>
+
+          <div class="timeline-item user">
+            <div class="turn-type">USER INPUT</div>
+            <div class="turn-message">Fix the authentication middleware to handle expired JWT tokens with proper 401 responses.</div>
+          </div>
+          <div class="timeline-item assistant">
+            <div class="turn-type">ASSISTANT</div>
+            <div class="turn-message">I'll update the auth middleware to properly handle expired tokens. Here's the fix:</div>
+          </div>
+          <div class="timeline-item tool">
+            <div class="turn-type">TOOL: read_file</div>
+            <div class="turn-code">src/middleware/auth.ts · 145 lines read</div>
+          </div>
+          <div class="timeline-item tool">
+            <div class="turn-type">TOOL: edit_file</div>
+            <div class="turn-code">src/middleware/auth.ts · +12 -3 lines</div>
+          </div>
+          <div class="timeline-item assistant">
+            <div class="turn-type">FINAL</div>
+            <div class="turn-message">Done! The middleware now catches expired tokens and returns 401 with a clear error message. Tests passing.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-primary">SEND PROMPT</button>
+          <button class="btn btn-ghost">CANCEL</button>
+          <button class="btn btn-danger">KILL</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════ AGENT PANEL ═══════════════ -->
+<div class="agent-drawer" style="display:none" id="agent-panel">
+  <div class="agent-header">// AGENT_INTERFACE</div>
+
+  <div style="margin-bottom:var(--space-2)">
+    <div class="detail-label">Agent Type</div>
+    <select class="agent-select">
+      <option>claude</option>
+      <option>opencode</option>
+      <option>codex</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom:var(--space-2)">
+    <div class="detail-label">Timeout (s)</div>
+    <input class="agent-input" style="min-height:unset;height:40px" value="300" placeholder="timeout in seconds">
+  </div>
+
+  <div class="detail-label">Prompt</div>
+  <textarea class="agent-input" placeholder="> enter instructions..."></textarea>
+
+  <div style="margin-top:8px;display:flex;gap:8px;">
+    <button class="btn btn-primary">EXECUTE</button>
+    <button class="btn btn-ghost">CLEAR</button>
+  </div>
+
+  <div class="detail-section" style="margin-top:var(--space-4)">
+    <div class="detail-label">Recent Executions</div>
+    <div class="exec-item running"><span class="status-dot dot-active">●</span> exec_a4f2 · running · 15s</div>
+    <div class="exec-item">  exec_9c3e · completed · 2m ago</div>
+    <div class="exec-item">  exec_7b1d · completed · 15m ago</div>
+    <div class="exec-item">  exec_2d8f · error · 1h ago</div>
+  </div>
+</div>
+
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div class="toast">✓ Session connected · 3 active peers</div>
+
+<!-- ═══════════════ DEMO CONTROLS ═══════════════ -->
+<div class="demo-bar">
+  <button onclick="document.getElementById('agent-panel').style.display='block'">打开 Agent</button>
+  <button onclick="document.getElementById('agent-panel').style.display='none'">关闭 Agent</button>
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.querySelector('.theme-toggle');
+  if (html.dataset.theme === 'dark') {
+    html.dataset.theme = 'light';
+    btn.textContent = '☀ MODE';
+  } else {
+    html.dataset.theme = 'dark';
+    btn.textContent = '☽ MODE';
+  }
+}
+</script>
+</body>
+</html>

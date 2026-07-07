@@ -50,7 +50,7 @@ class HierarchyStore extends Store {
     this.selectedWorkspaceId = id
     this.selectedTopicId = null
     this.selectedStoryId = null
-    this.notify()
+    this.flushSync()
   }
 
   selectTopic(id: number, name: string): void {
@@ -58,20 +58,20 @@ class HierarchyStore extends Store {
     this.selectedStoryId = null
     this.selectedTopicName = name
     this.expandedNodes['topic_' + id] = true
-    this.notify()
+    this.flushSync()
   }
 
   selectStory(id: number): void {
     this.selectedStoryId = id
     this.selectedTopicId = null
-    this.notify()
+    this.flushSync()
   }
 
   toggleNode(key: string): void {
     // Default to expanded (true); first click collapses.
     const current = this.expandedNodes[key] !== false
     this.expandedNodes[key] = !current
-    this.notify()
+    this.flushSync()
   }
 }
 

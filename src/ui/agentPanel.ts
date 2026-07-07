@@ -9,13 +9,12 @@ import { toast } from './toast'
 export function renderAgentPanel(): void {
   const host = document.getElementById('agent-panel')
   if (!host) return
-  host.className = 'agent-panel'
   host.innerHTML = `
     <div class="agent-panel-header" id="agent-panel-header">
       <span>Agent Control</span>
-      <span class="agent-panel-arrow" id="agent-panel-arrow">▼</span>
+      <button class="close-drawer" id="agent-close" aria-label="Close">✕</button>
     </div>
-    <div class="agent-panel-body" id="agent-panel-body">
+    <div class="agent-panel-body">
       <div class="agent-panel-row">
         <select id="agent-select" aria-label="Agent type">
           <option value="claude">Claude Code</option>
@@ -31,24 +30,18 @@ export function renderAgentPanel(): void {
           <option value="120">2h</option>
         </select>
       </div>
-      <textarea id="agent-prompt" class="agent-prompt" rows="2" placeholder="Enter prompt…"></textarea>
+      <textarea id="agent-prompt" class="agent-prompt" rows="3" placeholder="Enter prompt…"></textarea>
       <div class="agent-actions">
-        <button id="agent-send" class="btn-send">Send</button>
-        <button id="agent-cancel" class="btn-cancel">Cancel</button>
+        <button id="agent-send" class="btn btn-primary">Send</button>
+        <button id="agent-cancel" class="btn btn-secondary">Cancel</button>
         <span id="agent-status" class="agent-status"></span>
       </div>
       <div id="agent-output" class="agent-output"></div>
     </div>`
 
-  const header = document.getElementById('agent-panel-header')
-  const body = document.getElementById('agent-panel-body')
-  const arrow = document.getElementById('agent-panel-arrow')
-  if (header && body && arrow) {
-    header.onclick = () => {
-      const open = body.classList.toggle('open')
-      arrow.classList.toggle('open', open)
-    }
-  }
+  const closeBtn = document.getElementById('agent-close')
+  if (closeBtn) closeBtn.onclick = () => { host.style.display = 'none' }
+
   const sendBtn = document.getElementById('agent-send')
   if (sendBtn) sendBtn.onclick = onSend
   const cancelBtn = document.getElementById('agent-cancel')
@@ -158,10 +151,10 @@ function statusIcon(s: Execution['status']): string {
     case 'running':
       return '<span class="exec-spin"></span>'
     case 'completed':
-      return '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--success-text)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" fill="none" stroke="var(--success-text)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      return '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--status-active)" stroke-width="1.5"/><path d="M5 8l2 2 4-4" fill="none" stroke="var(--status-active)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     case 'error':
-      return '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--danger-text)" stroke-width="1.5"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" fill="none" stroke="var(--danger-text)" stroke-width="1.5" stroke-linecap="round"/></svg>'
+      return '<svg viewBox="0 0 16 16" width="14" height="14"><circle cx="8" cy="8" r="7" fill="none" stroke="var(--status-error)" stroke-width="1.5"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" fill="none" stroke="var(--status-error)" stroke-width="1.5" stroke-linecap="round"/></svg>'
     default:
-      return '<svg viewBox="0 0 16 16" width="14" height="14"><rect x="3" y="3" width="10" height="10" rx="2" fill="none" stroke="var(--text-muted)" stroke-width="1.5"/></svg>'
+      return '<svg viewBox="0 0 16 16" width="14" height="14"><rect x="3" y="3" width="10" height="10" rx="2" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5"/></svg>'
   }
 }

@@ -1,23 +1,58 @@
 import { hierarchyStore, type ProjectNode, type TopicNode } from '../state/hierarchy'
-import { sessionsStore } from '../state/sessions'
-import { esc, trunc } from '../utils/format'
-import { showCreateModal, showPermissionModal, onCreateStory, onEditStory, onDeleteStory } from './modals'
+import { esc } from '../utils/format'
+import { showCreateModal } from './modals'
+
+// JS hover tracking — survives SSE-driven innerHTML rebuilds.
+let hoveredTreeId: string | null = null
+
+function initTreeHoverTracking(container: HTMLElement): void {
+  if ((container as unknown as { _hoverWired?: boolean })._hoverWired) return
+  ;(container as unknown as { _hoverWired?: boolean })._hoverWired = true
+  container.addEventListener('mouseover', (e) => {
+    const item = (e.target as HTMLElement).closest<HTMLElement>('.tree-item')
+    if (!item) return
+    const id = item.dataset.id
+    if (!id || id === hoveredTreeId) return
+    if (hoveredTreeId) {
+      container.querySelector(`.tree-item[data-id="${CSS.escape(hoveredTreeId)}"]`)?.classList.remove('hover')
+    }
+    hoveredTreeId = id
+    item.classList.add('hover')
+  })
+  container.addEventListener('mouseout', (e) => {
+    const item = (e.target as HTMLElement).closest<HTMLElement>('.tree-item')
+    if (!item) return
+    const related = (e as MouseEvent).relatedTarget as HTMLElement | null
+    if (related && item.contains(related)) return
+    const id = item.dataset.id
+    if (id && id === hoveredTreeId) {
+      item.classList.remove('hover')
+      hoveredTreeId = null
+    }
+  })
+}
 
 export function renderSidebar(): void {
   const tree = hierarchyStore.tree
   const container = document.getElementById('sidebar-tree')
   if (!container || !tree || !tree.workspaces) return
 
+  initTreeHoverTracking(container)
+
   const ws = tree.workspaces.find((w) => w.workspace.id === hierarchyStore.selectedWorkspaceId)
-  if (!ws) { container.innerHTML = ''; return }
+  if (!ws) { container.innerHTML = ''; hoveredTreeId = null; return }
 
   let html = ''
   if (ws.projects) {
     for (const proj of ws.projects) html += renderProjectNode(proj)
   }
-  html += '<div class="tree-separator"></div>'
 
   container.innerHTML = html
+  // Re-apply hover after DOM rebuild.
+  if (hoveredTreeId) {
+    const el = container.querySelector(`.tree-item[data-id="${CSS.escape(hoveredTreeId)}"]`)
+    if (el) el.classList.add('hover')
+  }
 }
 
 export function bindTreeHandlers(): void {
@@ -29,53 +64,24 @@ export function bindTreeHandlers(): void {
 function renderProjectNode(proj: ProjectNode): string {
   const pId = 'proj_' + proj.project.id
   const pOpen = hierarchyStore.expandedNodes[pId] !== false
-  const count = (proj.topics || []).length
-  let h = `<div class="tree-node tree-project" data-action="toggle-proj" data-id="${pId}">
-    <span class="arrow${pOpen ? ' open' : ''}">▸</span>
-    <span class="node-icon">&#9632;</span>
-    <span class="label">${esc(proj.project.name)}</span>
-    ${count > 0 ? `<span class="count">${count}</span>` : ''}
-    <span class="add-child" data-action="create-topic" data-id="${proj.project.id}">+</span>
-    <span class="add-child" data-action="show-perm-project" data-id="${proj.project.id}">👥</span>
+  const sel = hierarchyStore.selectedTopicId === null && !hierarchyStore.selectedStoryId ? ' active' : ''
+  let h = `<div class="tree-item${sel}" data-action="toggle-proj" data-id="${pId}">
+    <span class="dot project"></span>${esc(proj.project.name)}
+    <span class="add-child" data-action="create-topic" data-id="${proj.project.id}" role="button" tabindex="0" aria-label="Add topic to ${esc(proj.project.name)}">+</span>
   </div>`
-  h += `<div class="tree-children${pOpen ? ' open' : ''}" id="${pId}">`
-  if (proj.topics) {
+  if (proj.topics && proj.topics.length > 0) {
+    h += `<div class="tree-children${pOpen ? ' open' : ''}" id="${pId}">`
     for (const topic of proj.topics) h += renderTopicNode(topic)
+    h += '</div>'
   }
-  h += '</div>'
   return h
 }
 
 function renderTopicNode(topic: TopicNode): string {
-  const tId = 'topic_' + topic.topic.id
-  const tOpen = hierarchyStore.expandedNodes[tId] !== false
-  const sel = hierarchyStore.selectedTopicId === topic.topic.id ? ' selected' : ''
-  const count = topic.stories?.length ?? 0
-  let h = `<div class="tree-node tree-topic${sel}" data-action="select-topic" data-id="${topic.topic.id}">
-    <span class="arrow${tOpen ? ' open' : ''}" data-action="toggle-node" data-id="${tId}">▸</span>
-    <span class="node-icon">&#9679;</span>
-    <span class="label">${esc(topic.topic.name)}</span>
-    ${count > 0 ? `<span class="count">${count}</span>` : ''}
-    <span class="add-child" data-action="create-story" data-id="${topic.topic.id}">+</span>
+  const sel = hierarchyStore.selectedTopicId === topic.topic.id ? ' active' : ''
+  return `<div class="tree-item child${sel}" data-action="select-topic" data-id="${topic.topic.id}">
+    <span class="dot service"></span>${esc(topic.topic.name)}
   </div>`
-  if (topic.stories && topic.stories.length > 0) {
-    h += `<div class="tree-children${tOpen ? ' open' : ''}" id="${tId}">`
-    for (const story of topic.stories) {
-      const storyKey = story.session_key
-      const storySel = hierarchyStore.selectedStoryId === story.id ? ' selected' : ''
-      const session = storyKey ? sessionsStore.sessions[storyKey] : null
-      const storyName = story.name
-      const sessionInfo = session ? (session.session_title || trunc(session.agent_session_id, 20)) : ''
-      h += `<div class="tree-node tree-story${storySel}" data-action="select-story" data-id="${story.id}">
-        <span class="node-icon">&#8728;</span>
-        <span class="label" title="${esc(sessionInfo)}">${esc(trunc(storyName, 28))}</span>
-        <span class="add-child" data-action="edit-story" data-id="${story.id}">✎</span>
-        <span class="add-child" data-action="delete-story" data-id="${story.id}">✕</span>
-      </div>`
-    }
-    h += '</div>'
-  }
-  return h
 }
 
 function bindTreeEventDelegation(container: HTMLElement): void {
@@ -89,35 +95,12 @@ function bindTreeEventDelegation(container: HTMLElement): void {
       case 'toggle-proj':
         hierarchyStore.toggleNode(id)
         break
-      case 'toggle-node':
-        e.stopPropagation()
-        hierarchyStore.toggleNode(id)
-        break
       case 'select-topic':
         hierarchyStore.selectTopic(parseInt(id, 10), '')
-        break
-      case 'select-story':
-        hierarchyStore.selectStory(parseInt(id, 10))
-        break
-      case 'show-perm-project':
-        e.stopPropagation()
-        showPermissionModal('project', parseInt(id, 10))
         break
       case 'create-topic':
         e.stopPropagation()
         showCreateModal('topic', parseInt(id, 10))
-        break
-      case 'create-story':
-        e.stopPropagation()
-        void onCreateStory(parseInt(id, 10))
-        break
-      case 'edit-story':
-        e.stopPropagation()
-        void onEditStory(parseInt(id, 10))
-        break
-      case 'delete-story':
-        e.stopPropagation()
-        void onDeleteStory(parseInt(id, 10))
         break
     }
   })

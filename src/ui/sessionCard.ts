@@ -1,23 +1,81 @@
 import { sessionsStore, type Session } from '../state/sessions'
 import { hierarchyStore } from '../state/hierarchy'
-import { sendInput } from '../api/agent'
+import { sendInput, cancelExecution } from '../api/agent'
 import { renderTimeline } from './timeline'
-import { esc, trunc } from '../utils/format'
+import { esc, trunc, formatTime } from '../utils/format'
 import { toast } from './toast'
 
-// renderSessionList — session rows in left panel
+// JS-managed hover state so the :hover-equivalent class survives SSE-driven
+// innerHTML rebuilds (which would otherwise cause a brief flash as the new DOM
+// element lacks the CSS :hover pseudo-class).
+let hoveredSessionKey: string | null = null
+
+function initSessionHoverTracking(body: HTMLElement): void {
+  // One-time delegated mouseenter/mouseleave on the container.
+  if ((body as unknown as { _hoverWired?: boolean })._hoverWired) return
+  ;(body as unknown as { _hoverWired?: boolean })._hoverWired = true
+  body.addEventListener('mouseover', (e) => {
+    const row = (e.target as HTMLElement).closest<HTMLElement>('.session-row')
+    if (!row) return
+    const key = row.dataset.key
+    if (!key || key === hoveredSessionKey) return
+    // Remove from previous
+    if (hoveredSessionKey) {
+      body.querySelector(`.session-row[data-key="${CSS.escape(hoveredSessionKey)}"]`)?.classList.remove('hover')
+    }
+    hoveredSessionKey = key
+    row.classList.add('hover')
+  })
+  body.addEventListener('mouseout', (e) => {
+    const row = (e.target as HTMLElement).closest<HTMLElement>('.session-row')
+    if (!row) return
+    // Only clear when leaving the row entirely
+    const related = (e as MouseEvent).relatedTarget as HTMLElement | null
+    if (related && row.contains(related)) return
+    const key = row.dataset.key
+    if (key && key === hoveredSessionKey) {
+      row.classList.remove('hover')
+      hoveredSessionKey = null
+    }
+  })
+}
+
+// renderSessionList — session rows in left panel (3-line vertical layout)
 export function renderSessionList(): void {
   const body = document.getElementById('session-list-body')
   if (!body) return
+
+  // Wire hover tracking once.
+  initSessionHoverTracking(body)
+
+  // Show skeleton only while waiting for the initial SSE snapshot.
+  const total = Object.keys(sessionsStore.sessions).length
+  if (total === 0) {
+    if (!sessionsStore.snapshotReceived) {
+      body.innerHTML = `<div class="empty-state">
+        <h2>Connecting…</h2>
+        <p>Waiting for session data from daemon.</p>
+        <div style="display:flex;flex-direction:column;gap:6px;width:100%;max-width:280px;margin-top:12px">
+          ${Array.from({length: 3}, () => '<div class="skeleton skeleton-row"></div>').join('')}
+        </div>
+      </div>`
+    } else {
+      body.innerHTML = `<div class="empty-state">
+        <h2>No sessions</h2>
+        <p>Start an agent or install hooks to begin monitoring.</p>
+      </div>`
+    }
+    hoveredSessionKey = null
+    return
+  }
 
   let topicKeys: Set<string> | null = null
   let storyKey: string | null = null
   if (hierarchyStore.selectedStoryId && hierarchyStore.tree) {
     storyKey = findStorySessionKey(hierarchyStore.selectedStoryId)
-    // If a story is selected but has no linked session, show empty rather
-    // than unfiltered list (filteredList with null,null would return ALL).
     if (!storyKey) {
-      body.innerHTML = '<div class="empty-state"><h3>No sessions linked</h3><p>This story is not yet linked to a session.</p></div>'
+      body.innerHTML = '<div class="empty-state"><h2>No sessions linked</h2><p>This story is not yet linked to a session.</p></div>'
+      hoveredSessionKey = null
       return
     }
   } else if (hierarchyStore.selectedTopicId && hierarchyStore.tree) {
@@ -26,42 +84,69 @@ export function renderSessionList(): void {
 
   const list = sessionsStore.filteredList(topicKeys, storyKey)
   if (list.length === 0) {
-    body.innerHTML = '<div class="empty-state"><h3>No sessions</h3><p>Select a topic on the left or wait for agent events.</p></div>'
+    body.innerHTML = '<div class="empty-state"><h2>No sessions</h2><p>Select a topic on the left or wait for agent events.</p></div>'
+    hoveredSessionKey = null
     return
   }
 
   body.innerHTML = list.map(s => renderSessionRow(s)).join('')
+
+  // Re-apply hover class after DOM rebuild so the background survives the repaint.
+  if (hoveredSessionKey) {
+    const hovered = body.querySelector(`.session-row[data-key="${CSS.escape(hoveredSessionKey)}"]`)
+    if (hovered) hovered.classList.add('hover')
+  }
+
   body.querySelectorAll('.session-row').forEach(row => {
-    row.addEventListener('click', () => {
-      body.querySelectorAll('.session-row').forEach(r => r.classList.remove('selected'))
+    const selectRow = () => {
+      body.querySelectorAll('.session-row').forEach(r => { r.classList.remove('selected'); r.setAttribute('aria-selected', 'false') })
       row.classList.add('selected')
+      row.setAttribute('aria-selected', 'true')
       const key = (row as HTMLElement).dataset.key || ''
       sessionsStore.selectedSessionKey = key
       renderSessionDetail()
+    }
+    row.addEventListener('click', selectRow)
+    row.addEventListener('keydown', (e) => {
+      const ke = e as KeyboardEvent
+      if (ke.key === 'Enter' || ke.key === ' ') { ke.preventDefault(); selectRow() }
+      if (ke.key === 'ArrowDown') {
+        ke.preventDefault()
+        const next = (row as HTMLElement).nextElementSibling as HTMLElement | null
+        if (next?.classList.contains('session-row')) { (next as HTMLElement).focus() }
+      }
+      if (ke.key === 'ArrowUp') {
+        ke.preventDefault()
+        const prev = (row as HTMLElement).previousElementSibling as HTMLElement | null
+        if (prev?.classList.contains('session-row')) { (prev as HTMLElement).focus() }
+      }
     })
   })
+}
+
+function statusDotClass(status: string): string {
+  if (status === 'active') return 'dot-active'
+  if (status === 'idle') return 'dot-idle'
+  if (status === 'error' || status === 'disappeared' || status === 'unknown') return 'dot-error'
+  return ''
 }
 
 function renderSessionRow(s: Session): string {
   const key = esc(s.session_key)
   const sel = sessionsStore.selectedSessionKey === s.session_key ? ' selected' : ''
-  const title = s.session_title || s.agent_session_id || key
-  const sub = [trunc(s.agent_session_id, 20), s.terminal || '-', s.memory_mb ? `${s.memory_mb.toFixed(0)}MB` : ''].filter(Boolean).join(' · ')
-  return `<div class="session-row${sel}" data-key="${key}">
-    <span class="row-status ${s.status}"></span>
-    <span class="agent-badge ${s.agent_type}">${esc(s.agent_type)}</span>
-    <span class="row-info">
-      <span class="row-title">${esc(title)}</span>
-      <span class="row-sub">${esc(sub)}</span>
-    </span>
-    <span class="row-meta">
-      <span>T${s.turn_count || 0}</span>
-      <span class="cpu" style="color:${s.cpu_percent ? 'var(--accent)' : 'var(--text-tertiary)'}">${s.cpu_percent ? s.cpu_percent.toFixed(0) + '%' : '—'}</span>
-    </span>
+  const dotCls = statusDotClass(s.status)
+  const dot = dotCls ? `<span class="status-dot ${dotCls}">●</span>` : ''
+  const addr = s.terminal || s.cwd || '-'
+  const pidStr = s.pid ? ` · PID ${s.pid}` : ''
+  const timeStr = formatTime(s.last_event_time_ms)
+  return `<div class="session-row${sel}" data-key="${key}" role="option" aria-selected="${sel !== ''}" tabindex="0">
+    <div class="session-key">${esc(trunc(key, 24))}</div>
+    <div class="session-agent">${esc(s.agent_type)} · ${esc(trunc(addr, 28))}</div>
+    <div class="session-time">${dot}${esc(s.status)}${pidStr}${timeStr ? ' · ' + esc(timeStr) : ''}</div>
   </div>`
 }
 
-// renderSessionDetail — right detail panel
+// renderSessionDetail — right detail panel with labeled sections
 export function renderSessionDetail(): void {
   const panel = document.getElementById('session-detail-panel')
   if (!panel) return
@@ -81,31 +166,35 @@ export function renderSessionDetail(): void {
   const existingInput = document.getElementById(draftKey) as HTMLInputElement | null
   const draftValue = existingInput ? existingInput.value : (sessionsStore.draftInputs[s.session_key] || '')
 
-  const title = s.session_title || s.agent_session_id
   const hasTurns = s.turns && s.turns.length > 0
   const isError = s.status === 'error' || s.status === 'disappeared' || s.status === 'unknown'
-  const actions = ''
+  const dotCls = statusDotClass(s.status)
+  const dot = dotCls ? `<span class="status-dot ${dotCls}">●</span>` : ''
+  const statusColor = s.status === 'active' ? 'var(--neon-green)' : s.status === 'idle' ? 'var(--neon-orange)' : s.status === 'stopped' ? 'var(--text-tertiary)' : 'var(--neon-magenta)'
+  const agentAddr = s.terminal || s.cwd || '-'
+  const heartbeat = formatTime(s.last_event_time_ms)
 
   panel.innerHTML = `<div class="session-detail-content">
-    <div class="detail-header">
-      <span class="agent-badge ${s.agent_type}">${esc(s.agent_type)}</span>
-      <span class="detail-title">${esc(title)}</span>
-      <span class="status-badge ${s.status}">${s.status}</span>
-      <div class="detail-actions">${actions}</div>
-    </div>
+    <div class="detail-header">SESSION: ${esc(trunc(s.session_key, 24))}</div>
     ${isError ? renderErrorAlert(s) : ''}
-    <div class="info-grid">
-      <div class="info-item"><div class="info-label">Session</div><div class="info-value">${esc(trunc(s.agent_session_id, 16))}</div></div>
-      <div class="info-item"><div class="info-label">PID</div><div class="info-value">${s.pid || '—'}</div></div>
-      <div class="info-item"><div class="info-label">Terminal</div><div class="info-value">${esc(s.terminal || '—')}</div></div>
-      <div class="info-item"><div class="info-label">CWD</div><div class="info-value">${esc(trunc(s.cwd || '', 36))}</div></div>
-      <div class="info-item"><div class="info-label">Turns</div><div class="info-value">${s.turn_count || 0}</div></div>
-      <div class="info-item"><div class="info-label">CPU / Memory</div><div class="info-value">${s.cpu_percent ? s.cpu_percent.toFixed(0) + '%' : '—'} · ${s.memory_mb ? s.memory_mb.toFixed(0) + ' MB' : '—'}</div></div>
+    <div class="detail-section">
+      <div class="detail-label">Agent</div>
+      <div class="detail-value">${esc(s.agent_type)} · PID ${s.pid || '—'} · ${esc(trunc(agentAddr, 36))}</div>
     </div>
-    ${hasTurns ? '<div class="detail-section-title">Timeline</div>' + renderTimeline(s.turns!, s.session_key) : ''}
+    <div class="detail-section">
+      <div class="detail-label">Status</div>
+      <div class="detail-value" style="border-left-color:${statusColor}">
+        ${dot} ${esc(s.status)} · ${heartbeat ? 'last event ' + esc(heartbeat) : 'no events yet'}
+      </div>
+    </div>
+    ${hasTurns ? '<div class="detail-section"><div class="detail-label">Timeline</div>' + renderTimeline(s.turns!, s.session_key) + '</div>' : ''}
     <div class="session-input-row">
       <input type="text" id="detail-input-${esc(s.session_key)}" placeholder="Send input to this session...">
-      <button class="btn btn-primary" data-send="${esc(s.session_key)}">Send</button>
+      <button class="btn btn-primary" data-send="${esc(s.session_key)}">SEND</button>
+    </div>
+    <div class="detail-actions">
+      <button class="btn btn-ghost" data-cancel="${esc(s.session_key)}">CANCEL</button>
+      <button class="btn btn-danger" data-kill="${esc(s.session_key)}">KILL</button>
     </div>
   </div>`
 
@@ -116,6 +205,14 @@ export function renderSessionDetail(): void {
   const inputEl = panel.querySelector('input') as HTMLInputElement | null
   if (inputEl) {
     inputEl.onkeydown = (e) => { if (e.key === 'Enter') onSendDetail(s.session_key) }
+  }
+  const cancelBtn = panel.querySelector(`[data-cancel="${esc(s.session_key)}"]`)
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => onCancelDetail(s))
+  }
+  const killBtn = panel.querySelector(`[data-kill="${esc(s.session_key)}"]`)
+  if (killBtn) {
+    killBtn.addEventListener('click', () => onKillDetail(s))
   }
   // Restore draft input value and scroll position after rebuilding innerHTML.
   const restoredInput = document.getElementById(draftKey) as HTMLInputElement | null
@@ -131,7 +228,8 @@ function renderErrorAlert(s: Session): string {
 }
 
 async function onSendDetail(key: string): Promise<void> {
-  const input = document.getElementById('detail-input-' + key) as HTMLInputElement | null
+  const safeKey = esc(key)
+  const input = document.getElementById('detail-input-' + safeKey) as HTMLInputElement | null
   if (!input) return
   const text = input.value.trim()
   if (!text) return
@@ -141,6 +239,24 @@ async function onSendDetail(key: string): Promise<void> {
     toast.ok('Sent')
   } catch (e) {
     toast.error('Send failed')
+  }
+}
+
+async function onCancelDetail(s: Session): Promise<void> {
+  try {
+    await cancelExecution(s.agent_type, s.agent_session_id)
+    toast.info('Execution cancelled')
+  } catch (e) {
+    toast.error('Cancel failed: ' + ((e as Error).message || 'unknown'))
+  }
+}
+
+async function onKillDetail(s: Session): Promise<void> {
+  try {
+    await cancelExecution(s.agent_type, s.agent_session_id)
+    toast.warn('Kill signal sent')
+  } catch (e) {
+    toast.error('Kill failed: ' + ((e as Error).message || 'unknown'))
   }
 }
 

@@ -22,7 +22,7 @@ function authBoxHTML(mode: 'login' | 'register'): string {
     <input type="text" id="auth-username" placeholder="Username" autocomplete="username" autofocus>
     <input type="password" id="auth-password" placeholder="Password" autocomplete="${isLogin ? 'current-password' : 'new-password'}">
     ${!isLogin ? '<input type="password" id="auth-password2" placeholder="Confirm password" autocomplete="new-password">' : ''}
-    <button id="auth-submit">${isLogin ? 'Sign In' : 'Create Account'}</button>
+    <button id="auth-submit" class="primary">${isLogin ? 'Sign In' : 'Create Account'}</button>
     <div class="switch">
       ${isLogin ? 'Don\'t have an account? <a id="auth-toggle">Sign up</a>' : 'Already have an account? <a id="auth-toggle">Sign in</a>'}
     </div>
