@@ -13,6 +13,13 @@ export type SSEEventType =
   | 'agent_message'
   | 'agent_error'
   | 'agent_cancelled'
+  // Agent Registry
+  | 'agent_registry_snapshot'
+  | 'agent_profile_updated'
+  | 'agent_capabilities_updated'
+  // Story Runs
+  | 'story_run_started'
+  | 'story_run_updated'
 
 export interface SSEEvent {
   type: SSEEventType
