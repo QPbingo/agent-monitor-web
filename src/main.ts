@@ -9,6 +9,7 @@ import { renderSidebar, bindTreeHandlers } from './ui/sidebar'
 import { renderSessionList, renderSessionDetail, bindSessionHandlers } from './ui/sessionCard'
 import { bindTimelineHandlers } from './ui/timeline'
 import { renderAgentPanel, renderExecHistory, renderAgentSessionList, renderAgentTopicOptions } from './ui/agentPanel'
+import { renderAgentsView } from './ui/agentsView'
 import { closeModal } from './ui/modals'
 import { toast } from './ui/toast'
 import './styles/main.css'
@@ -52,7 +53,7 @@ function connectSSE(): void {
 }
 
 // ── Shell rendering ──
-let currentView: 'dashboard' | 'sessions' = 'sessions'
+let currentView: 'dashboard' | 'sessions' | 'agents' = 'sessions'
 
 function renderShell(): void {
   const root = document.getElementById('app')
@@ -66,6 +67,7 @@ function renderShell(): void {
       <div class="logo">AGENT<span>//MON</span></div>
       <button class="nav-item active" id="nav-sessions-btn" data-view="sessions">SESSIONS</button>
       <button class="nav-item" id="nav-dashboard-btn" data-view="dashboard">DASHBOARD</button>
+      <button class="nav-item" id="nav-agents-btn" data-view="agents">AGENTS</button>
       <div class="nav-spacer"></div>
       <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/light theme">☽ MODE</button>
       <div class="user-dropdown-wrap" id="user-dropdown-wrap">
@@ -164,6 +166,11 @@ function renderShell(): void {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Agents View -->
+      <div class="view-panel" id="view-agents">
+        <div id="agents-view-container"></div>
       </div>
     </main>
     <!-- Agent panel: slide-out drawer -->
@@ -389,7 +396,7 @@ function wireSidebarNav(): void {
 }
 
 function switchView(view: string): void {
-  currentView = view as 'dashboard' | 'sessions'
+  currentView = view as 'dashboard' | 'sessions' | 'agents'
   document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'))
   const panel = document.getElementById('view-' + view)
   if (panel) panel.classList.add('active')
@@ -401,6 +408,7 @@ function switchView(view: string): void {
   if (sideNav) sideNav.classList.add('active')
   if (headerNav) headerNav.classList.add('active')
   if (view === 'dashboard') renderDashboard()
+  if (view === 'agents') renderAgentsPanel()
 }
 
 // ── Render functions ──
@@ -556,6 +564,11 @@ function renderStatsRow(): void {
     <div class="stat-card"><div class="stat-label">Total Turns</div><div class="stat-value">${totalTurns}</div><div class="stat-sub">avg ${avgTurns} per session</div></div>
     <div class="stat-card"><div class="stat-label">Errors</div><div class="stat-value${errors > 0 ? ' magenta' : ''}">${errors}</div><div class="stat-sub">${errors > 0 ? 'needs attention' : 'all healthy'}</div></div>
     <div class="stat-card"><div class="stat-label">Uptime</div><div class="stat-value orange">${uptime}</div><div class="stat-sub">page session</div></div>`
+}
+
+function renderAgentsPanel(): void {
+  const container = document.getElementById('agents-view-container')
+  if (container) renderAgentsView(container)
 }
 
 function renderDashboard(): void {
