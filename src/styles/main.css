@@ -738,6 +738,28 @@ input, select, textarea { font-family: var(--font-sans); }
 .msg-error { color: var(--danger); margin-top: 8px; }
 .msg-raw { font-size: 11px; color: var(--text-tertiary); margin-top: 8px; white-space: pre-wrap; word-break: break-all; }
 
+.agent-diff { margin-top: 8px; padding: 12px 16px; max-height: 320px; overflow-y: auto; background: var(--input-bg); border: 1px solid var(--border-hairline); font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; word-break: break-word; color: var(--text-secondary); }
+.agent-diff-loading { color: var(--text-tertiary); }
+.agent-diff-empty { color: var(--text-tertiary); }
+.agent-diff-stat { color: var(--text-tertiary); margin-bottom: 8px; }
+.agent-diff-untracked { color: var(--neon-orange); margin-bottom: 8px; }
+.agent-diff-truncated { color: var(--danger); margin-bottom: 8px; }
+.agent-diff-body { margin: 0; }
+.diff-add { color: var(--success); }
+.diff-del { color: var(--danger); }
+.diff-hunk { color: var(--neon-cyan); }
+
+/* Agent panel — recent (SDK-sourced) session list */
+.agent-session-list { display: flex; flex-direction: column; max-height: 220px; overflow-y: auto; border: 1px solid var(--border-hairline); background: var(--input-bg); }
+.agent-session-empty { padding: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+.agent-session-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-bottom: 1px solid var(--border-hairline); cursor: pointer; }
+.agent-session-row:last-child { border-bottom: none; }
+.agent-session-row:hover { background: rgba(0,240,255,0.04); }
+.agent-session-row .status-dot { margin-top: 2px; font-size: 9px; }
+.agent-session-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+.agent-session-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+.agent-session-cwd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-tertiary); font-size: 10px; }
+
 /* Animations — Multi-neon pulses, each color independent */
 @keyframes neonPulseGreen {
   0%   { box-shadow: 0 0 8px var(--neon-green); }

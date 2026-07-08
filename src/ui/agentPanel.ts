@@ -1,4 +1,4 @@
-import { sendPrompt, cancelExecution, createSession, resumeSession, renameSession } from '../api/agent'
+import { sendPrompt, cancelExecution, createSession, resumeSession, renameSession, getDiff, type DiffResponse } from '../api/agent'
 import { agentStore, type Execution } from '../state/agent'
 import { hierarchyStore } from '../state/hierarchy'
 import { sessionsStore } from '../state/sessions'
@@ -75,6 +75,12 @@ export function renderAgentPanel(): void {
       </div>
       <div id="agent-output" class="agent-output"></div>
 
+      <div class="sidebar-label">Diff</div>
+      <div class="agent-panel-row">
+        <button id="agent-load-diff" class="btn btn-ghost" style="flex:1">Load Diff</button>
+      </div>
+      <div id="agent-diff" class="agent-diff"></div>
+
       <div class="sidebar-label">Recent Sessions</div>
       <div id="agent-session-list" class="agent-session-list"></div>
     </div>`
@@ -92,6 +98,8 @@ export function renderAgentPanel(): void {
   if (resumeBtn) resumeBtn.onclick = onResume
   const renameBtn = document.getElementById('agent-rename')
   if (renameBtn) renameBtn.onclick = onRename
+  const loadDiffBtn = document.getElementById('agent-load-diff')
+  if (loadDiffBtn) loadDiffBtn.onclick = onLoadDiff
 
   renderAgentSessionList()
   renderAgentTopicOptions()
@@ -366,4 +374,55 @@ function statusIcon(s: Execution['status']): string {
     default:
       return '<svg viewBox="0 0 16 16" width="14" height="14"><rect x="3" y="3" width="10" height="10" rx="2" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5"/></svg>'
   }
+}
+
+async function onLoadDiff(): Promise<void> {
+  const agentType = agentTypeValue()
+  const sessionId = sessionIdValue()
+  const host = document.getElementById('agent-diff')
+  if (!host) return
+  if (!sessionId) {
+    toast.warn('Session ID is required to load a diff')
+    return
+  }
+  host.innerHTML = '<div class="agent-diff-loading">Loading diff…</div>'
+  try {
+    const res = await getDiff(agentType, sessionId)
+    host.innerHTML = renderDiff(res)
+  } catch (e) {
+    host.innerHTML = ''
+    toast.error('Load diff failed: ' + ((e as Error).message || 'unknown'))
+  }
+}
+
+function renderDiff(res: DiffResponse): string {
+  if (!res.is_git_repo) {
+    return '<div class="agent-diff-empty">Not a git repository (or session has no working directory).</div>'
+  }
+  let html = ''
+  if (res.stat) html += `<div class="agent-diff-stat">${esc(res.stat)}</div>`
+  if (res.untracked_files.length > 0) {
+    html += `<div class="agent-diff-untracked">Untracked: ${res.untracked_files.map(esc).join(', ')}</div>`
+  }
+  if (res.truncated) {
+    html += '<div class="agent-diff-truncated">Diff too large to display inline — view it in your editor/terminal.</div>'
+  } else if (res.diff) {
+    html += `<pre class="agent-diff-body">${colorizeDiff(res.diff)}</pre>`
+  } else {
+    html += '<div class="agent-diff-empty">No changes.</div>'
+  }
+  return html
+}
+
+function colorizeDiff(diff: string): string {
+  return diff
+    .split('\n')
+    .map((line) => {
+      const escaped = esc(line)
+      if (line.startsWith('+') && !line.startsWith('+++')) return `<span class="diff-add">${escaped}</span>`
+      if (line.startsWith('-') && !line.startsWith('---')) return `<span class="diff-del">${escaped}</span>`
+      if (line.startsWith('@@')) return `<span class="diff-hunk">${escaped}</span>`
+      return escaped
+    })
+    .join('\n')
 }

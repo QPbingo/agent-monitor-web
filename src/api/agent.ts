@@ -127,3 +127,19 @@ export async function sendInput(sessionKey: string, text: string): Promise<void>
     body: JSON.stringify({ text }),
   })
 }
+
+export interface DiffResponse {
+  cwd: string
+  is_git_repo: boolean
+  stat: string
+  diff: string
+  untracked_files: string[]
+  truncated: boolean
+}
+
+export async function getDiff(agentType: string, sessionId: string): Promise<DiffResponse> {
+  return request<DiffResponse>(
+    `/api/agent/${agentType}/sessions/${encodeURIComponent(sessionId)}/diff`,
+    { method: 'GET' },
+  )
+}
