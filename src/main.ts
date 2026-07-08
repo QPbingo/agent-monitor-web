@@ -10,6 +10,7 @@ import { renderSessionList, renderSessionDetail, bindSessionHandlers } from './u
 import { bindTimelineHandlers } from './ui/timeline'
 import { renderAgentPanel, renderExecHistory, renderAgentSessionList, renderAgentTopicOptions } from './ui/agentPanel'
 import { renderAgentsView } from './ui/agentsView'
+import { renderStoryDetail } from './ui/storyDetail'
 import { closeModal } from './ui/modals'
 import { toast } from './ui/toast'
 import './styles/main.css'
@@ -53,7 +54,8 @@ function connectSSE(): void {
 }
 
 // ── Shell rendering ──
-let currentView: 'dashboard' | 'sessions' | 'agents' = 'sessions'
+let currentView: 'dashboard' | 'sessions' | 'agents' | 'story-detail' = 'sessions'
+let currentStoryId: number | null = null
 
 function renderShell(): void {
   const root = document.getElementById('app')
@@ -172,6 +174,11 @@ function renderShell(): void {
       <div class="view-panel" id="view-agents">
         <div id="agents-view-container"></div>
       </div>
+
+      <!-- Story Detail View -->
+      <div class="view-panel" id="view-story-detail">
+        <div id="story-detail-container"></div>
+      </div>
     </main>
     <!-- Agent panel: slide-out drawer -->
     <div id="agent-panel" class="agent-drawer" style="display:none" role="complementary" aria-label="Agent control panel"></div>`
@@ -252,6 +259,10 @@ function renderShell(): void {
       lastTopicId = hierarchyStore.selectedTopicId
       lastStoryId = hierarchyStore.selectedStoryId
       sessionsStore.selectedSessionKey = null
+      // Show story detail when a story is selected in sidebar
+      if (hierarchyStore.selectedStoryId && !hierarchyStore.selectedTopicId) {
+        showStoryDetail(hierarchyStore.selectedStoryId)
+      }
     }
     hierarchyStore._sync ? renderShellNow() : renderShellDeferred()
   })
@@ -396,7 +407,7 @@ function wireSidebarNav(): void {
 }
 
 function switchView(view: string): void {
-  currentView = view as 'dashboard' | 'sessions' | 'agents'
+  currentView = view as 'dashboard' | 'sessions' | 'agents' | 'story-detail'
   document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'))
   const panel = document.getElementById('view-' + view)
   if (panel) panel.classList.add('active')
@@ -409,6 +420,17 @@ function switchView(view: string): void {
   if (headerNav) headerNav.classList.add('active')
   if (view === 'dashboard') renderDashboard()
   if (view === 'agents') renderAgentsPanel()
+  if (view === 'story-detail' && currentStoryId) renderStoryDetailPanel()
+}
+
+export function showStoryDetail(storyId: number): void {
+  currentStoryId = storyId
+  switchView('story-detail')
+}
+
+function renderStoryDetailPanel(): void {
+  const container = document.getElementById('story-detail-container')
+  if (container && currentStoryId) renderStoryDetail(container, currentStoryId)
 }
 
 // ── Render functions ──

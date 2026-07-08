@@ -901,3 +901,47 @@ input, select, textarea { font-family: var(--font-sans); }
 .profile-editor input:focus, .profile-editor select:focus, .profile-editor textarea:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 2px 2px 0 var(--neon-cyan); }
 .form-actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
 .text-muted { color: var(--text-tertiary); font-size: 12px; font-style: italic; }
+
+/* ── Sidebar stories ── */
+.tree-stories { padding-left: var(--space-4); }
+.story-item { font-size: 11px; padding: 2px 8px; }
+.story-item .story-dot { width: 6px; height: 6px; border-radius: 1px; background: var(--text-tertiary); }
+.story-item.active { color: var(--neon-green); }
+.story-agent-badge { font-size: 9px; background: var(--neon-cyan); color: var(--bg); padding: 0 3px; margin-left: var(--space-1); border-radius: 1px; }
+
+/* ── Story Detail ── */
+.story-detail { padding: var(--space-4); overflow-y: auto; height: 100%; }
+.story-detail-header { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.story-detail-title { font-family: var(--font-pixel); font-size: 11px; color: var(--neon-cyan); text-shadow: var(--cyan-glow); text-transform: uppercase; margin: 0; }
+.story-detail-status { font-size: 10px; padding: 1px 6px; border: 1px solid var(--border); }
+.story-detail-status.open { color: var(--text-secondary); }
+.story-detail-status.running { color: var(--neon-green); border-color: var(--neon-green); }
+.story-detail-status.completed { color: var(--neon-cyan); }
+.story-detail-status.failed { color: var(--text-error); }
+.story-detail-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: var(--space-3); }
+.story-desc { margin-top: var(--space-1); color: var(--text-tertiary); font-style: italic; }
+.story-section { background: var(--card-bg); border: 1px solid var(--border); padding: var(--space-3); margin-bottom: var(--space-3); }
+.story-section h3 { font-family: var(--font-pixel); font-size: 10px; color: var(--text-secondary); text-transform: uppercase; margin: 0 0 var(--space-2); }
+.story-bound-agent { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; }
+.agent-name { color: var(--text-primary); font-weight: 600; }
+.agent-provider { color: var(--text-tertiary); font-size: 11px; text-transform: capitalize; }
+.agent-locked { color: var(--text-tertiary); font-size: 10px; }
+.agent-select { padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text-primary); font-size: 13px; min-width: 200px; }
+.story-running { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--neon-green); }
+.story-prompt { width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text-primary); font-size: 13px; font-family: var(--font-mono); resize: vertical; margin-top: 4px; box-shadow: 2px 2px 0 var(--pixel-border-dark); }
+.story-prompt:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 2px 2px 0 var(--neon-cyan); }
+.run-options { margin: var(--space-2) 0; }
+.run-opt { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: var(--space-1); }
+.run-list { font-size: 12px; }
+.run-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; border-bottom: 1px solid var(--border-hairline); }
+.run-item:last-child { border-bottom: none; }
+.run-id { color: var(--text-secondary); font-family: var(--font-mono); }
+.run-status { font-size: 10px; padding: 0 4px; }
+.run-status.queued { color: var(--text-tertiary); }
+.run-status.running { color: var(--neon-green); }
+.run-status.completed { color: var(--neon-cyan); }
+.run-status.failed { color: var(--text-error); }
+.run-status.cancelled { color: var(--text-tertiary); }
+.run-prompt-preview { color: var(--text-primary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.run-session { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 10px; }
+.run-time { color: var(--text-tertiary); font-size: 10px; white-space: nowrap; }

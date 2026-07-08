@@ -79,9 +79,21 @@ function renderProjectNode(proj: ProjectNode): string {
 
 function renderTopicNode(topic: TopicNode): string {
   const sel = hierarchyStore.selectedTopicId === topic.topic.id ? ' active' : ''
-  return `<div class="tree-item child${sel}" data-action="select-topic" data-id="${topic.topic.id}">
+  let h = `<div class="tree-item child${sel}" data-action="select-topic" data-id="${topic.topic.id}">
     <span class="dot service"></span>${esc(topic.topic.name)}
   </div>`
+  if (topic.stories && topic.stories.length > 0) {
+    h += '<div class="tree-stories">'
+    for (const story of topic.stories) {
+      const sSel = hierarchyStore.selectedStoryId === story.id ? ' active' : ''
+      h += `<div class="tree-item story-item${sSel}" data-action="select-story" data-id="${story.id}">
+        <span class="dot story-dot"></span>${esc(story.name)}
+        ${story.agent_profile_id ? '<span class="story-agent-badge">agent</span>' : ''}
+      </div>`
+    }
+    h += '</div>'
+  }
+  return h
 }
 
 function bindTreeEventDelegation(container: HTMLElement): void {
@@ -97,6 +109,9 @@ function bindTreeEventDelegation(container: HTMLElement): void {
         break
       case 'select-topic':
         hierarchyStore.selectTopic(parseInt(id, 10), '')
+        break
+      case 'select-story':
+        hierarchyStore.selectStory(parseInt(id, 10))
         break
       case 'create-topic':
         e.stopPropagation()
