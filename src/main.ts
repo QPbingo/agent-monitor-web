@@ -7,7 +7,7 @@ import { SSEManager, sseStatusBus, type SSEStatus, type SSEEvent } from './sse/m
 import { renderSidebar, bindTreeHandlers } from './ui/sidebar'
 import { renderSessionList, renderSessionDetail, bindSessionHandlers } from './ui/sessionCard'
 import { bindTimelineHandlers } from './ui/timeline'
-import { renderAgentPanel, renderExecHistory } from './ui/agentPanel'
+import { renderAgentPanel, renderExecHistory, renderAgentSessionList, renderAgentTopicOptions } from './ui/agentPanel'
 import { closeModal } from './ui/modals'
 import { toast } from './ui/toast'
 import './styles/main.css'
@@ -228,11 +228,11 @@ function renderShell(): void {
 
   function renderShellDeferred() {
     scheduleRender(() => {
-      renderSidebar(); renderSessionList(); renderTopNav(); renderFilters(); renderStatsRow(); renderDashboard()
+      renderSidebar(); renderSessionList(); renderTopNav(); renderFilters(); renderStatsRow(); renderDashboard(); renderAgentSessionList(); renderAgentTopicOptions()
     })
   }
   function renderShellNow() {
-    renderSidebar(); renderSessionList(); renderTopNav(); renderFilters(); renderStatsRow(); renderDashboard()
+    renderSidebar(); renderSessionList(); renderTopNav(); renderFilters(); renderStatsRow(); renderDashboard(); renderAgentSessionList(); renderAgentTopicOptions()
   }
 
   hierarchyStore.subscribe(() => {
@@ -265,7 +265,7 @@ function renderShell(): void {
       // scheduleRender calls would drop the second due to renderPending dedup
       // (BUG-002: detail panel never updated on SSE deltas).
       scheduleRender(() => {
-        renderSidebar(); renderSessionList(); renderTopNav(); renderFilters(); renderStatsRow(); renderDashboard()
+        renderSidebar(); renderSessionList(); renderTopNav(); renderFilters(); renderStatsRow(); renderDashboard(); renderAgentSessionList(); renderAgentTopicOptions()
         const key = sessionsStore.selectedSessionKey
         const sess = key ? sessionsStore.sessions[key] : null
         const h = key ? hashSessionForDetail(sess) : 'empty'
