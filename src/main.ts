@@ -2,6 +2,7 @@ import { restoreSession, showApp, doLogout, wireUnauthorizedAutoLogout } from '.
 import { authStore } from './state/auth'
 import { agentStore } from './state/agent'
 import { hierarchyStore } from './state/hierarchy'
+import { registryStore } from './state/registry'
 import { sessionsStore, SESSION_STATUSES } from './state/sessions'
 import { SSEManager, sseStatusBus, type SSEStatus, type SSEEvent } from './sse/manager'
 import { renderSidebar, bindTreeHandlers } from './ui/sidebar'
@@ -40,6 +41,7 @@ function handleSSE(event: SSEEvent): void {
   hierarchyStore.applyEvent(event)
   sessionsStore.applyEvent(event)
   agentStore.applyEvent(event)
+  registryStore.applyEvent(event)
 }
 
 function connectSSE(): void {

@@ -3,8 +3,8 @@ import type { SSEEvent } from '../sse/manager'
 
 export interface Workspace { id: number; name: string; description: string; status: string; created_at: number; updated_at: number }
 export interface Project { id: number; workspace_id: number; name: string; description: string; status: string; created_at: number; updated_at: number }
-export interface Topic { id: number; project_id: number; name: string; description: string; agent_type: string; status: string; created_at: number; updated_at: number }
-export interface Story { id: number; topic_id: number; name: string; description: string; session_key: string; status: string; created_at: number; updated_at: number }
+export interface Topic { id: number; project_id: number; name: string; description: string; agent_type: string; orchestration_note?: string; status: string; created_at: number; updated_at: number }
+export interface Story { id: number; topic_id: number; name: string; description: string; session_key: string; agent_profile_id?: number | null; latest_run_id?: number | null; latest_session_key?: string; status: string; created_at: number; updated_at: number }
 
 export interface WorkspaceNode {
   workspace: Workspace
