@@ -20,13 +20,13 @@ class RegistryStore extends Store {
         break
       }
       case 'agent_capabilities_updated': {
-        this.capabilities = (event as unknown as Capability[]) ?? []
+        this.capabilities = (event.capabilities as Capability[]) ?? []
         this.notify()
         break
       }
       case 'agent_profile_updated': {
         // Profile update may come as the full profile object or null (refresh needed)
-        const profile = event as unknown as AgentProfile | null
+        const profile = (event as any).data as AgentProfile | null
         if (profile && profile.workspace_id) {
           this.upsertProfile(profile)
         }
@@ -35,7 +35,7 @@ class RegistryStore extends Store {
       }
       case 'story_run_started':
       case 'story_run_updated': {
-        const run = event as unknown as StoryRun
+        const run = (event as any).data as StoryRun
         if (run && run.story_id) {
           this.upsertRun(run)
         }
