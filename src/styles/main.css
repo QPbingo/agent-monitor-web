@@ -1158,9 +1158,12 @@ input, select, textarea { font-family: var(--font-sans); }
 .story-desc { margin-top: var(--space-1); color: var(--text-tertiary); font-style: italic; }
 .story-section { background: var(--card-bg); border: 1px solid var(--border); padding: var(--space-3); margin-bottom: var(--space-3); }
 .story-section h3 { font-family: var(--font-pixel); font-size: 10px; color: var(--text-secondary); text-transform: uppercase; margin: 0 0 var(--space-2); }
-.story-bound-agent { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; }
+.story-bound-agent { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; flex-wrap: wrap; }
 .agent-name { color: var(--text-primary); font-weight: 600; }
 .agent-provider { color: var(--text-tertiary); font-size: 11px; text-transform: capitalize; }
+.agent-status { font-size: 10px; text-transform: uppercase; font-family: var(--font-mono); padding: 1px 6px; border: 1px solid var(--border); }
+.agent-status.active { color: var(--neon-green); border-color: var(--neon-green); }
+.agent-status.disabled { color: var(--text-tertiary); border-color: var(--border); }
 .agent-locked { color: var(--text-tertiary); font-size: 10px; }
 .agent-select { padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text-primary); font-size: 13px; min-width: 200px; }
 .story-running { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--neon-green); }

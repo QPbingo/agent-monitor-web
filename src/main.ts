@@ -381,7 +381,7 @@ function wireSidebarNav(): void {
   })
 }
 
-function switchView(view: string): void {
+export function switchView(view: string): void {
   currentView = view as 'dashboard' | 'sessions' | 'agents' | 'story-detail' | 'project-board' | 'topic-board'
   document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'))
   const panel = document.getElementById('view-' + view)

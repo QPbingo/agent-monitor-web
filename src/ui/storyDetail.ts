@@ -41,18 +41,24 @@ export function renderStoryDetail(container: HTMLElement, storyId: number): void
           ? `<div class="story-bound-agent">
               <span class="agent-name">${esc(profile.name)}</span>
               <span class="agent-provider">${profile.provider}</span>
-              ${!hasRuns ? '<button class="btn btn-small" id="btn-change-agent">Change</button>' : '<span class="agent-locked">🔒 locked (has runs)</span>'}
+              <span class="agent-status ${profile.status}">${profile.status}</span>
+              ${!hasRuns ? '<button class="btn btn-small" id="btn-change-agent">Change</button>' : '<span class="agent-locked">locked (has runs)</span>'}
             </div>`
-          : `<div class="story-unbound">
-              <p class="text-muted">No agent bound. Select an agent to run this story:</p>
-              <select id="agent-select" class="agent-select">
-                <option value="">-- Select Agent --</option>
-                ${profiles.filter(p => p.status === 'active').map(p =>
-                  `<option value="${p.id}">${esc(p.name)} (${p.provider})</option>`
-                ).join('')}
-              </select>
-              <button class="btn btn-primary" id="btn-bind-agent">Bind Agent</button>
-            </div>`
+          : profiles.length === 0
+            ? `<div class="story-unbound">
+                <p class="text-muted">No Agents in this workspace.</p>
+                <button class="btn btn-primary" id="btn-open-agents">Scan Local Agents</button>
+              </div>`
+            : `<div class="story-unbound">
+                <p class="text-muted">No agent bound. Select an agent to run this story:</p>
+                <select id="agent-select" class="agent-select">
+                  <option value="">-- Select Agent --</option>
+                  ${profiles.filter(p => p.status === 'active').map(p =>
+                    `<option value="${p.id}">${esc(p.name)} (${p.provider})</option>`
+                  ).join('')}
+                </select>
+                <button class="btn btn-primary" id="btn-bind-agent">Bind Agent</button>
+              </div>`
         }
       </div>
 
@@ -66,7 +72,7 @@ export function renderStoryDetail(container: HTMLElement, storyId: number): void
               <button class="btn btn-danger btn-small" id="btn-cancel-run" data-run-id="${runningRun.id}">Cancel</button>
             </div>`
           : `<div id="story-run-form">
-              <label>Prompt <textarea id="run-prompt" rows="3" class="story-prompt">${esc(story.description || '')}</textarea></label>
+              <label>Prompt <textarea id="run-prompt" rows="3" class="story-prompt">${esc(story.description || story.name)}</textarea></label>
               <button class="btn btn-primary" id="btn-run">Send</button>
             </div>`
         }
@@ -152,6 +158,11 @@ function bindStoryHandlers(container: HTMLElement, storyId: number, story: Story
     } catch (e: unknown) {
       toast.error(`Bind failed: ${e instanceof Error ? e.message : String(e)}`)
     }
+  })
+
+  // Scan Local Agents → switch to Agents view
+  container.querySelector('#btn-open-agents')?.addEventListener('click', () => {
+    import('../main').then(({ switchView }) => switchView('agents'))
   })
 
   // Change agent
