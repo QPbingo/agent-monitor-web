@@ -99,6 +99,7 @@ export interface RunResponse {
 export interface ScanResponse {
   runtime: Runtime
   capabilities: Capability[]
+  agents?: AgentProfile[]
 }
 
 // ── Runtime & Capability ──
@@ -107,8 +108,11 @@ export function getCurrentRuntime(): Promise<Runtime> {
   return request<Runtime>('/api/agent-runtimes/current')
 }
 
-export function scanCapabilities(): Promise<ScanResponse> {
-  return request<ScanResponse>('/api/agent-runtimes/scan', { method: 'POST' })
+export function scanCapabilities(workspaceId?: number): Promise<ScanResponse> {
+  return request<ScanResponse>('/api/agent-runtimes/scan', {
+    method: 'POST',
+    body: JSON.stringify({ workspace_id: workspaceId }),
+  })
 }
 
 export function listCapabilities(): Promise<Capability[]> {

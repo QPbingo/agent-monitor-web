@@ -45,11 +45,11 @@ export function renderAgentsView(container: HTMLElement): void {
 
         <div class="agents-profiles" id="agents-profiles">
           <div class="agents-profiles-header">
-            <h3>Profiles</h3>
-            <button class="btn btn-small" id="btn-new-profile">+ New Profile</button>
+            <h3>Agents</h3>
+            <button class="btn btn-small" id="btn-new-profile">+ New Agent</button>
           </div>
           ${profiles.length === 0
-            ? '<p class="text-muted">No agent profiles in this workspace.</p>'
+            ? '<p class="text-muted">No agents in this workspace. Click "Scan Local Agents" to detect installed agents.</p>'
             : profiles.map(p => `
               <div class="profile-item ${p.id === selectedProfileId ? 'selected' : ''} ${p.status === 'disabled' ? 'disabled' : ''}"
                    data-profile-id="${p.id}">
@@ -84,10 +84,14 @@ function bindHandlers(container: HTMLElement): void {
     btn.disabled = true
     btn.textContent = 'Scanning...'
     try {
-      const result = await scanCapabilities()
+      const wsId = hierarchyStore.selectedWorkspaceId ?? 0
+      const result = await scanCapabilities(wsId)
       if (result) {
         registryStore.runtime = result.runtime
         registryStore.capabilities = result.capabilities
+        if (result.agents && wsId) {
+          registryStore.setProfiles(wsId, result.agents)
+        }
         toast.ok('Scan complete')
         renderAgentsView(container)
       }
@@ -127,7 +131,7 @@ function renderProfileEditor(container: HTMLElement): void {
 
   editor.style.display = 'block'
   editor.innerHTML = `
-    <h3>${profile ? 'Edit Profile' : 'New Profile'}</h3>
+    <h3>${profile ? 'Edit Agent' : 'New Agent'}</h3>
     <form id="profile-form">
       <label>Name <input type="text" name="name" value="${esc(profile?.name ?? '')}" required></label>
       <label>Provider
@@ -168,10 +172,10 @@ function renderProfileEditor(container: HTMLElement): void {
     try {
       if (profile) {
         await updateProfile(profile.id, input)
-        toast.ok('Profile updated')
+        toast.ok('Agent updated')
       } else {
         await createProfile(wsId, input)
-        toast.ok('Profile created')
+        toast.ok('Agent created')
       }
       // Refresh
       const profiles = await listProfiles(wsId)
@@ -192,7 +196,7 @@ function renderProfileEditor(container: HTMLElement): void {
     if (!profile) return
     try {
       await deleteProfile(profile.id)
-      toast.ok('Profile disabled')
+      toast.ok('Agent disabled')
       const wsId = hierarchyStore.selectedWorkspaceId ?? 0
       const profiles = await listProfiles(wsId)
       registryStore.setProfiles(wsId, profiles)
