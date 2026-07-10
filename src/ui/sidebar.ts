@@ -108,7 +108,6 @@ function bindTreeEventDelegation(container: HTMLElement): void {
         // Select the project when its row is clicked (not the + button)
         const projId = btn.dataset.project
         if (projId) hierarchyStore.selectProject(parseInt(projId, 10))
-        hierarchyStore.toggleNode(id)
         break
       }
       case 'select-topic':
