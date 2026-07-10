@@ -56,7 +56,7 @@ function connectSSE(): void {
 }
 
 // ── Shell rendering ──
-let currentView: 'dashboard' | 'sessions' | 'agents' | 'story-detail' | 'project-board' | 'topic-board' = 'sessions'
+let currentView: 'dashboard' | 'sessions' | 'agents' | 'story-detail' | 'project-board' | 'topic-board' | 'agent-panel' = 'sessions'
 let currentStoryId: number | null = null
 
 function renderShell(): void {
@@ -174,9 +174,12 @@ function renderShell(): void {
       <div class="view-panel" id="view-topic-board">
         <div class="board-shell" id="topic-board-container"></div>
       </div>
-    </main>
-    <!-- Agent panel: slide-out drawer -->
-    <div id="agent-panel" class="agent-drawer" style="display:none" role="complementary" aria-label="Agent control panel"></div>`
+
+      <!-- Agent Panel View (inline, not drawer) -->
+      <div class="view-panel" id="view-agent-panel">
+        <div class="full-main" id="agent-panel-container"></div>
+      </div>
+    </main>`
 
   // Overlays
   const modalOverlay = document.createElement('div')
@@ -198,7 +201,6 @@ function renderShell(): void {
   bindTreeHandlers()
   bindSessionHandlers()
   bindTimelineHandlers()
-  renderAgentPanel()
 
   // ── Theme ──
   const saved = localStorage.getItem('agent-monitor-theme')
@@ -341,13 +343,7 @@ function wireTopNav(): void {
 
   const agentPanelBtn = document.getElementById('sidebar-agent-panel-btn')
   if (agentPanelBtn) {
-    agentPanelBtn.onclick = () => {
-      const ap = document.getElementById('agent-panel')
-      if (ap) {
-        const visible = ap.style.display === 'block'
-        ap.style.display = visible ? 'none' : 'block'
-      }
-    }
+    agentPanelBtn.onclick = () => switchView('agent-panel')
   }
 
   const wsNewBtn = document.getElementById('ws-new-btn')
@@ -382,7 +378,7 @@ function wireSidebarNav(): void {
 }
 
 export function switchView(view: string): void {
-  currentView = view as 'dashboard' | 'sessions' | 'agents' | 'story-detail' | 'project-board' | 'topic-board'
+  currentView = view as 'dashboard' | 'sessions' | 'agents' | 'story-detail' | 'project-board' | 'topic-board' | 'agent-panel'
   document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'))
   const panel = document.getElementById('view-' + view)
   if (panel) panel.classList.add('active')
@@ -395,6 +391,7 @@ export function switchView(view: string): void {
   if (view === 'story-detail' && currentStoryId) renderStoryDetailPanel()
   if (view === 'project-board') renderProjectBoardPanel()
   if (view === 'topic-board') renderTopicBoardPanel()
+  if (view === 'agent-panel') renderAgentPanelView()
 }
 
 export function showStoryDetail(storyId: number): void {
@@ -562,6 +559,10 @@ function renderStatsRow(): void {
 function renderAgentsPanel(): void {
   const container = document.getElementById('agents-view-container')
   if (container) renderAgentsView(container)
+}
+
+function renderAgentPanelView(): void {
+  renderAgentPanel()
 }
 
 function renderDashboard(): void {

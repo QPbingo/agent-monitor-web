@@ -5,8 +5,9 @@ import { sessionsStore } from '../state/sessions'
 import { esc, formatPayloadDisplay } from '../utils/format'
 import { toast } from './toast'
 
-// renderAgentPanel mounts the agent control panel into #agent-panel (created
-// by the shell). Replaces the old inline-style version with the design system.
+// renderAgentPanel mounts the agent control panel inline into
+// #agent-panel-container (created by the shell). Previously was a slide-out
+// drawer; now renders as a full inline view for smoother UX.
 //
 // Layout:
 //   1. New Session — agent type, permission mode, cwd, model → createSession()
@@ -15,13 +16,10 @@ import { toast } from './toast'
 //   4. Recent Sessions — sdk-sourced sessions from sessionsStore, click to load
 //      (renderAgentSessionList, kept in sync via SSE through main.ts)
 export function renderAgentPanel(): void {
-  const host = document.getElementById('agent-panel')
+  const host = document.getElementById('agent-panel-container')
   if (!host) return
   host.innerHTML = `
-    <div class="agent-panel-header" id="agent-panel-header">
-      <span>Agent Control</span>
-      <button class="close-drawer" id="agent-close" aria-label="Close">✕</button>
-    </div>
+    <h1 style="font-family:var(--font-pixel);font-size:11px;color:var(--neon-purple);text-shadow:0 0 12px rgba(197,112,255,0.3);text-transform:uppercase;margin-bottom:16px">Agent Control</h1>
     <div class="agent-panel-body">
       <div class="sidebar-label">New Session</div>
       <div class="agent-panel-row">
@@ -84,9 +82,6 @@ export function renderAgentPanel(): void {
       <div class="sidebar-label">Recent Sessions</div>
       <div id="agent-session-list" class="agent-session-list"></div>
     </div>`
-
-  const closeBtn = document.getElementById('agent-close')
-  if (closeBtn) closeBtn.onclick = () => { host.style.display = 'none' }
 
   const sendBtn = document.getElementById('agent-send')
   if (sendBtn) sendBtn.onclick = onSend
