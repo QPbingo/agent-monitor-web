@@ -530,7 +530,7 @@ input, select, textarea { font-family: var(--font-sans); }
   width: 28px; height: 28px;
   background: var(--neon-purple);
   font-family: var(--font-pixel); font-size: 9px;
-  color: #fff;
+  color: var(--text-primary);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   text-transform: uppercase;

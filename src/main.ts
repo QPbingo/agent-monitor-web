@@ -84,14 +84,14 @@ function renderShell(): void {
             </div>
           </div>
 
+          <div class="side-nav-item" data-view="dashboard" id="nav-dashboard">
+            <span class="side-nav-icon">◆</span>
+            <span class="side-nav-label">Dashboard</span>
+          </div>
           <div class="side-nav-item active" id="nav-sessions" data-view="sessions">
             <span class="side-nav-icon">◆</span>
             <span class="side-nav-label">Sessions</span>
             <span class="side-nav-badge" id="sess-badge">0</span>
-          </div>
-          <div class="side-nav-item" data-view="dashboard" id="nav-dashboard">
-            <span class="side-nav-icon">◆</span>
-            <span class="side-nav-label">Dashboard</span>
           </div>
           <div class="side-nav-item" data-view="agents" id="nav-agents">
             <span class="side-nav-icon">◆</span>
