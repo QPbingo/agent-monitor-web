@@ -6,6 +6,7 @@ import { registryStore } from './state/registry'
 import { sessionsStore, SESSION_STATUSES } from './state/sessions'
 import { SSEManager, sseStatusBus, type SSEStatus, type SSEEvent } from './sse/manager'
 import { renderSidebar, bindTreeHandlers } from './ui/sidebar'
+import { renderProjectBoard, renderTopicBoard } from './ui/workspaceViews'
 import { renderSessionList, renderSessionDetail, bindSessionHandlers } from './ui/sessionCard'
 import { bindTimelineHandlers } from './ui/timeline'
 import { renderAgentPanel, renderExecHistory, renderAgentSessionList, renderAgentTopicOptions } from './ui/agentPanel'
@@ -54,7 +55,7 @@ function connectSSE(): void {
 }
 
 // ── Shell rendering ──
-let currentView: 'dashboard' | 'sessions' | 'agents' | 'story-detail' = 'sessions'
+let currentView: 'dashboard' | 'sessions' | 'agents' | 'story-detail' | 'project-board' | 'topic-board' = 'sessions'
 let currentStoryId: number | null = null
 
 function renderShell(): void {
@@ -179,6 +180,16 @@ function renderShell(): void {
       <div class="view-panel" id="view-story-detail">
         <div id="story-detail-container"></div>
       </div>
+
+      <!-- Project Board View -->
+      <div class="view-panel" id="view-project-board">
+        <div class="board-shell" id="project-board-container"></div>
+      </div>
+
+      <!-- Topic Board View -->
+      <div class="view-panel" id="view-topic-board">
+        <div class="board-shell" id="topic-board-container"></div>
+      </div>
     </main>
     <!-- Agent panel: slide-out drawer -->
     <div id="agent-panel" class="agent-drawer" style="display:none" role="complementary" aria-label="Agent control panel"></div>`
@@ -237,6 +248,7 @@ function renderShell(): void {
   // For batched SSE notifications: coalesce DOM writes into one rAF frame.
   // For user actions (flushSync): render immediately in the current frame.
   let lastWsId = hierarchyStore.selectedWorkspaceId
+  let lastProjectId = hierarchyStore.selectedProjectId
   let lastTopicId = hierarchyStore.selectedTopicId
   let lastStoryId = hierarchyStore.selectedStoryId
   let lastDetailKey: string | null = null
@@ -253,15 +265,22 @@ function renderShell(): void {
 
   hierarchyStore.subscribe(() => {
     if (hierarchyStore.selectedWorkspaceId !== lastWsId ||
+        hierarchyStore.selectedProjectId !== lastProjectId ||
         hierarchyStore.selectedTopicId !== lastTopicId ||
         hierarchyStore.selectedStoryId !== lastStoryId) {
       lastWsId = hierarchyStore.selectedWorkspaceId
+      lastProjectId = hierarchyStore.selectedProjectId
       lastTopicId = hierarchyStore.selectedTopicId
       lastStoryId = hierarchyStore.selectedStoryId
       sessionsStore.selectedSessionKey = null
-      // Show story detail when a story is selected in sidebar
-      if (hierarchyStore.selectedStoryId && !hierarchyStore.selectedTopicId) {
+
+      // Board / detail view switching based on what's selected
+      if (hierarchyStore.selectedStoryId) {
         showStoryDetail(hierarchyStore.selectedStoryId)
+      } else if (hierarchyStore.selectedTopicId) {
+        switchView('topic-board')
+      } else if (hierarchyStore.selectedProjectId) {
+        switchView('project-board')
       }
     }
     hierarchyStore._sync ? renderShellNow() : renderShellDeferred()
@@ -407,7 +426,7 @@ function wireSidebarNav(): void {
 }
 
 function switchView(view: string): void {
-  currentView = view as 'dashboard' | 'sessions' | 'agents' | 'story-detail'
+  currentView = view as 'dashboard' | 'sessions' | 'agents' | 'story-detail' | 'project-board' | 'topic-board'
   document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'))
   const panel = document.getElementById('view-' + view)
   if (panel) panel.classList.add('active')
@@ -421,6 +440,8 @@ function switchView(view: string): void {
   if (view === 'dashboard') renderDashboard()
   if (view === 'agents') renderAgentsPanel()
   if (view === 'story-detail' && currentStoryId) renderStoryDetailPanel()
+  if (view === 'project-board') renderProjectBoardPanel()
+  if (view === 'topic-board') renderTopicBoardPanel()
 }
 
 export function showStoryDetail(storyId: number): void {
@@ -431,6 +452,20 @@ export function showStoryDetail(storyId: number): void {
 function renderStoryDetailPanel(): void {
   const container = document.getElementById('story-detail-container')
   if (container && currentStoryId) renderStoryDetail(container, currentStoryId)
+}
+
+function renderProjectBoardPanel(): void {
+  const container = document.getElementById('project-board-container')
+  if (container && hierarchyStore.selectedProjectId) {
+    renderProjectBoard(container, hierarchyStore.selectedProjectId)
+  }
+}
+
+function renderTopicBoardPanel(): void {
+  const container = document.getElementById('topic-board-container')
+  if (container && hierarchyStore.selectedTopicId) {
+    renderTopicBoard(container, hierarchyStore.selectedTopicId)
+  }
 }
 
 // ── Render functions ──

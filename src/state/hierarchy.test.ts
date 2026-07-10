@@ -14,6 +14,7 @@ describe('hierarchyStore', () => {
   beforeEach(() => {
     hierarchyStore.tree = null
     hierarchyStore.selectedWorkspaceId = null
+    hierarchyStore.selectedProjectId = null
     hierarchyStore.selectedTopicId = null
     hierarchyStore.selectedStoryId = null
     hierarchyStore.expandedNodes = {}
@@ -26,6 +27,17 @@ describe('hierarchyStore', () => {
     hierarchyStore.selectedStoryId = 10
     hierarchyStore.selectWorkspace(2)
     expect(hierarchyStore.selectedWorkspaceId).toBe(2)
+    expect(hierarchyStore.selectedTopicId).toBeNull()
+    expect(hierarchyStore.selectedStoryId).toBeNull()
+  })
+
+  it('selectProject clears topic and story selection', () => {
+    hierarchyStore.selectedTopicId = 2
+    hierarchyStore.selectedStoryId = 3
+
+    hierarchyStore.selectProject(1)
+
+    expect(hierarchyStore.selectedProjectId).toBe(1)
     expect(hierarchyStore.selectedTopicId).toBeNull()
     expect(hierarchyStore.selectedStoryId).toBeNull()
   })

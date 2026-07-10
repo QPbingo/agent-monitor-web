@@ -64,8 +64,8 @@ export function bindTreeHandlers(): void {
 function renderProjectNode(proj: ProjectNode): string {
   const pId = 'proj_' + proj.project.id
   const pOpen = hierarchyStore.expandedNodes[pId] !== false
-  const sel = hierarchyStore.selectedTopicId === null && !hierarchyStore.selectedStoryId ? ' active' : ''
-  let h = `<div class="tree-item${sel}" data-action="toggle-proj" data-id="${pId}">
+  const sel = hierarchyStore.selectedProjectId === proj.project.id ? ' active' : ''
+  let h = `<div class="tree-item${sel}" data-action="toggle-proj" data-project="${proj.project.id}" data-id="${pId}">
     <span class="dot project"></span>${esc(proj.project.name)}
     <span class="add-child" data-action="create-topic" data-id="${proj.project.id}" role="button" tabindex="0" aria-label="Add topic to ${esc(proj.project.name)}">+</span>
   </div>`
@@ -104,9 +104,13 @@ function bindTreeEventDelegation(container: HTMLElement): void {
     const action = btn.dataset.action
     const id = btn.dataset.id ?? ''
     switch (action) {
-      case 'toggle-proj':
+      case 'toggle-proj': {
+        // Select the project when its row is clicked (not the + button)
+        const projId = btn.dataset.project
+        if (projId) hierarchyStore.selectProject(parseInt(projId, 10))
         hierarchyStore.toggleNode(id)
         break
+      }
       case 'select-topic':
         hierarchyStore.selectTopic(parseInt(id, 10), '')
         break

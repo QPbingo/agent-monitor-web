@@ -909,6 +909,121 @@ input, select, textarea { font-family: var(--font-sans); }
 .story-item.active { color: var(--neon-green); }
 .story-agent-badge { font-size: 9px; background: var(--neon-cyan); color: var(--bg); padding: 0 3px; margin-left: var(--space-1); border-radius: 1px; }
 
+/* ── Board Views ── */
+.board-shell { overflow-y: auto; height: 100%; }
+.board-header {
+  padding: var(--space-4) var(--space-4) 0;
+  margin-bottom: var(--space-3);
+}
+.board-header h2 {
+  font-family: var(--font-pixel); font-size: 11px;
+  color: var(--neon-cyan); text-shadow: var(--cyan-glow);
+  text-transform: uppercase; margin: 0;
+}
+.board-header-desc {
+  font-size: 11px; color: var(--text-tertiary);
+  margin-top: var(--space-1); font-style: italic;
+}
+.board-header-count {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-tertiary); margin-top: var(--space-1);
+  display: inline-block;
+}
+.board-lanes {
+  padding: 0 var(--space-4) var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-3);
+}
+.topic-lane {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  box-shadow: var(--pixel-shadow) var(--pixel-border-dark);
+}
+.topic-lane-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-hairline);
+  font-family: var(--font-pixel); font-size: 9px;
+  color: var(--neon-purple); text-transform: uppercase;
+  letter-spacing: 1px; line-height: 1;
+}
+.topic-lane-name { flex: 1; }
+.topic-lane-count {
+  font-family: var(--font-mono); color: var(--text-tertiary);
+  font-size: 11px;
+}
+.topic-lane-stories {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+.topic-lane-empty {
+  grid-column: 1 / -1;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-tertiary); padding: var(--space-3);
+  text-align: center;
+}
+.story-card {
+  background: var(--muted-bg);
+  border: 1px solid var(--border-subtle);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: var(--space-1);
+  box-shadow: 2px 2px 0 var(--pixel-border-dark);
+}
+.story-card:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 2px 2px 0 var(--neon-cyan);
+}
+.story-card-name {
+  font-family: var(--font-sans); font-size: 13px;
+  font-weight: 600; color: var(--text-primary);
+}
+.story-card-meta {
+  display: flex; gap: var(--space-2);
+  font-size: 11px; font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+.story-card-meta .story-agent { color: var(--text-secondary); }
+.story-card-meta .story-session { color: var(--text-disabled); }
+.story-card-status {
+  display: flex; gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.story-card-status .status-badge {
+  font-family: var(--font-pixel); font-size: 8px;
+  text-transform: uppercase; padding: 2px 6px;
+  letter-spacing: 0.5px; line-height: 1;
+  border: 1px solid var(--border); color: var(--text-tertiary);
+}
+.story-card-status .status-badge.run-badge-running {
+  color: var(--neon-green); border-color: var(--neon-green);
+}
+.story-card-status .status-badge.run-badge-completed {
+  color: var(--neon-cyan); border-color: var(--neon-cyan);
+}
+.story-card-status .status-badge.run-badge-failed {
+  color: var(--neon-magenta); border-color: var(--neon-magenta);
+}
+.story-card-status .status-badge.run-badge-cancelled {
+  color: var(--text-tertiary); border-color: var(--text-disabled);
+}
+.story-card-status .status-badge.run-badge-not_run {
+  color: var(--text-disabled); border-color: var(--border);
+}
+.story-card-status .status-badge.story-badge-in_progress {
+  color: var(--neon-green); border-color: var(--neon-green);
+}
+.story-card-status .status-badge.story-badge-completed {
+  color: var(--neon-cyan); border-color: var(--neon-cyan);
+}
+.story-card-status .status-badge.story-badge-failed {
+  color: var(--neon-magenta); border-color: var(--neon-magenta);
+}
+.story-card-status .status-badge.story-badge-cancelled {
+  color: var(--text-tertiary); border-color: var(--text-disabled);
+}
+
 /* ── Story Detail ── */
 .story-detail { padding: var(--space-4); overflow-y: auto; height: 100%; }
 .story-detail-header { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }

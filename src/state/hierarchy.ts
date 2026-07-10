@@ -25,6 +25,7 @@ export interface HierarchyTree {
 class HierarchyStore extends Store {
   tree: HierarchyTree | null = null
   selectedWorkspaceId: number | null = null
+  selectedProjectId: number | null = null
   selectedTopicId: number | null = null
   selectedStoryId: number | null = null
   selectedTopicName = ''
@@ -46,8 +47,17 @@ class HierarchyStore extends Store {
     }
   }
 
+  selectProject(id: number): void {
+    this.selectedProjectId = id
+    this.selectedTopicId = null
+    this.selectedStoryId = null
+    this.expandedNodes['proj_' + id] = true
+    this.flushSync()
+  }
+
   selectWorkspace(id: number): void {
     this.selectedWorkspaceId = id
+    this.selectedProjectId = null
     this.selectedTopicId = null
     this.selectedStoryId = null
     this.flushSync()
@@ -55,6 +65,7 @@ class HierarchyStore extends Store {
 
   selectTopic(id: number, name: string): void {
     this.selectedTopicId = id
+    this.selectedProjectId = null
     this.selectedStoryId = null
     this.selectedTopicName = name
     this.expandedNodes['topic_' + id] = true
@@ -63,6 +74,7 @@ class HierarchyStore extends Store {
 
   selectStory(id: number): void {
     this.selectedStoryId = id
+    this.selectedProjectId = null
     this.selectedTopicId = null
     this.flushSync()
   }
