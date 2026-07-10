@@ -67,12 +67,7 @@ export function renderStoryDetail(container: HTMLElement, storyId: number): void
             </div>`
           : `<div id="story-run-form">
               <label>Prompt <textarea id="run-prompt" rows="3" class="story-prompt">${esc(story.description || '')}</textarea></label>
-              <div class="run-options">
-                <label class="run-opt">
-                  <input type="checkbox" id="run-new-session"> New Session
-                </label>
-              </div>
-              <button class="btn btn-primary" id="btn-run">▶ Run</button>
+              <button class="btn btn-primary" id="btn-run">Send</button>
             </div>`
         }
       </div>
@@ -175,9 +170,8 @@ function bindStoryHandlers(container: HTMLElement, storyId: number, story: Story
   // Run
   container.querySelector('#btn-run')?.addEventListener('click', async () => {
     const prompt = (container.querySelector('#run-prompt') as HTMLTextAreaElement)?.value ?? ''
-    const newSession = (container.querySelector('#run-new-session') as HTMLInputElement)?.checked ?? false
     try {
-      const result = await createRun(storyId, { prompt, new_session: newSession })
+      const result = await createRun(storyId, { prompt })
       toast.ok(`Run #${result.run_id} started`)
       // Refresh runs
       const runs = await listRuns(storyId)

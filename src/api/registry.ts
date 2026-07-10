@@ -82,7 +82,6 @@ export interface RunInput {
   prompt?: string
   permission_mode?: string
   cwd?: string
-  new_session?: boolean
   session_title?: string
 }
 
