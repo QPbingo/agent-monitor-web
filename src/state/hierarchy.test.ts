@@ -84,6 +84,35 @@ describe('hierarchyStore', () => {
     hierarchyStore.applyEvent({ type: 'hierarchy_updated', hierarchy: { workspaces: [] } })
     expect(hierarchyStore.tree).toEqual({ workspaces: [] })
   })
+
+  it('keeps story status separate from latest run status', () => {
+    hierarchyStore.setTree({
+      workspaces: [{
+        workspace: { id: 1, name: 'W', description: '', status: '', created_at: 0, updated_at: 0 },
+        projects: [{
+          project: { id: 2, workspace_id: 1, name: 'P', description: '', status: '', created_at: 0, updated_at: 0 },
+          topics: [{
+            topic: { id: 3, project_id: 2, name: 'T', description: '', agent_type: '', status: '', created_at: 0, updated_at: 0 },
+            stories: [{
+              id: 4,
+              topic_id: 3,
+              name: 'S',
+              description: '',
+              session_key: '',
+              status: 'in_progress',
+              latest_run_status: 'running',
+              created_at: 0,
+              updated_at: 0,
+            }],
+          }],
+        }],
+      }],
+    })
+
+    const story = hierarchyStore.tree?.workspaces[0].projects[0].topics[0].stories[0]
+    expect(story?.status).toBe('in_progress')
+    expect(story?.latest_run_status).toBe('running')
+  })
 })
 
 // SESS-07: card expansion is independent per session key
