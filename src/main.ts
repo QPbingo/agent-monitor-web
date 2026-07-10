@@ -12,6 +12,7 @@ import { bindTimelineHandlers } from './ui/timeline'
 import { renderAgentPanel, renderExecHistory, renderAgentSessionList, renderAgentTopicOptions } from './ui/agentPanel'
 import { renderAgentsView } from './ui/agentsView'
 import { renderStoryDetail } from './ui/storyDetail'
+import type { StoryRun } from './api/registry'
 import { closeModal } from './ui/modals'
 import { toast } from './ui/toast'
 import './styles/main.css'
@@ -65,34 +66,7 @@ function renderShell(): void {
     <!-- Skip link for keyboard users -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <!-- Top Navigation -->
-    <nav class="top-nav" aria-label="Main navigation">
-      <div class="logo">AGENT<span>//MON</span></div>
-      <button class="nav-item active" id="nav-sessions-btn" data-view="sessions">SESSIONS</button>
-      <button class="nav-item" id="nav-dashboard-btn" data-view="dashboard">DASHBOARD</button>
-      <button class="nav-item" id="nav-agents-btn" data-view="agents">AGENTS</button>
-      <div class="nav-spacer"></div>
-      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark/light theme">☽ MODE</button>
-      <div class="user-dropdown-wrap" id="user-dropdown-wrap">
-        <div class="user-avatar" id="user-avatar" title="User menu">U</div>
-        <div class="user-dropdown" id="user-dropdown">
-          <div class="user-info">
-            <span class="avatar-lg" id="user-avatar-lg">U</span>
-            <div>
-              <div class="user-name" id="user-fullname">User</div>
-              <div class="user-role"><span class="dot"></span> Admin</div>
-            </div>
-          </div>
-          <button class="menu-item" id="menu-permissions">Permissions</button>
-          <button class="menu-item" id="menu-agent-panel">Agent Panel</button>
-          <div class="menu-sep"></div>
-          <button class="menu-item danger" id="menu-signout">Sign Out</button>
-        </div>
-        <div class="user-dropdown-backdrop" id="user-backdrop"></div>
-      </div>
-    </nav>
-
-    <!-- Main area -->
+    <!-- Main area (no top nav) -->
     <main class="main-area" id="main-content">
       <aside class="sidebar" id="sidebar" aria-label="Project navigation">
         <div class="sidebar-body">
@@ -119,6 +93,10 @@ function renderShell(): void {
             <span class="side-nav-icon">◆</span>
             <span class="side-nav-label">Dashboard</span>
           </div>
+          <div class="side-nav-item" data-view="agents" id="nav-agents">
+            <span class="side-nav-icon">◆</span>
+            <span class="side-nav-label">Agents</span>
+          </div>
 
           <div class="tree-separator"></div>
 
@@ -127,15 +105,19 @@ function renderShell(): void {
             <span class="add-btn" id="sidebar-add-project" title="Add Project" role="button" tabindex="0">+</span>
           </div>
           <div id="sidebar-tree"></div>
+        </div>
 
-          <div class="sidebar-section" style="margin-top:var(--space-4)">
-            <div class="sidebar-label">Status</div>
-            <div class="sidebar-status-item" id="sidebar-daemon">
-              <span class="status-dot active">●</span> daemon :9101
-            </div>
-            <div class="sidebar-status-item" id="sidebar-sess-count">
-              <span class="status-dot active">●</span> <span id="sidebar-active-label">0 active</span> · <span id="sidebar-total-label">0 total</span>
-            </div>
+        <div class="sidebar-footer" id="sidebar-footer">
+          <div class="sidebar-user" id="sidebar-user-area">
+            <span class="sidebar-avatar" id="sidebar-user-avatar">U</span>
+            <span class="sidebar-user-name" id="sidebar-user-name">User</span>
+          </div>
+          <div class="sidebar-footer-divider"></div>
+          <div class="sidebar-footer-actions">
+            <button class="side-action" id="sidebar-theme-toggle" aria-label="Toggle theme">☽ MODE</button>
+            <button class="side-action" id="sidebar-permissions">Permissions</button>
+            <button class="side-action" id="sidebar-agent-panel-btn">Agent Panel</button>
+            <button class="side-action danger" id="sidebar-signout">Sign Out</button>
           </div>
         </div>
       </aside>
@@ -147,9 +129,11 @@ function renderShell(): void {
             <h1 style="font-family:var(--font-pixel);font-size:11px;color:var(--neon-cyan);text-shadow:var(--cyan-glow);text-transform:uppercase">Dashboard</h1>
             <div id="dash-ws-subtitle" style="font-size:11px;color:var(--text-tertiary);margin-top:4px"></div>
           </div>
-          <div class="stats-row" id="stats-row"></div>
+          <div class="dashboard-status-grid" id="dashboard-status"></div>
           <div class="detail-section-title">Recent Activity</div>
           <div id="recent-activity"></div>
+          <div class="detail-section-title">Recent Story Runs</div>
+          <div id="recent-story-runs"></div>
         </main>
       </div>
 
@@ -218,7 +202,7 @@ function renderShell(): void {
 
   // ── Theme ──
   const saved = localStorage.getItem('agent-monitor-theme')
-  const themeToggle = document.getElementById('theme-toggle')
+  const themeToggle = document.getElementById('sidebar-theme-toggle')
   if (themeToggle) {
     if (saved === 'light') {
       document.documentElement.setAttribute('data-theme', 'light')
@@ -325,7 +309,7 @@ function renderShell(): void {
   renderStatsRow()
 }
 
-// ── Top nav wiring ──
+// ── Sidebar + footer wiring ──
 let topNavWired = false
 function wireTopNav(): void {
   if (topNavWired) return
@@ -345,33 +329,19 @@ function wireTopNav(): void {
     })
   }
 
-  // User avatar dropdown in header
-  const userAvatar = document.getElementById('user-avatar')
-  const userDropdown = document.getElementById('user-dropdown')
-  const userBackdrop = document.getElementById('user-backdrop')
-  if (userAvatar && userDropdown && userBackdrop) {
-    userAvatar.onclick = (e) => {
-      e.stopPropagation()
-      userDropdown.classList.toggle('open')
-      userBackdrop.classList.toggle('open')
-    }
-    userBackdrop.onclick = () => { userDropdown.classList.remove('open'); userBackdrop.classList.remove('open') }
-  }
+  // Sidebar footer actions (replacing old top-nav dropdown)
+  const signoutBtn = document.getElementById('sidebar-signout')
+  if (signoutBtn) signoutBtn.onclick = () => doLogout()
 
-  const signoutBtn = document.getElementById('menu-signout')
-  if (signoutBtn) signoutBtn.onclick = () => { userDropdown?.classList.remove('open'); userBackdrop?.classList.remove('open'); doLogout() }
-
-  const permBtn = document.getElementById('menu-permissions')
+  const permBtn = document.getElementById('sidebar-permissions')
   if (permBtn) permBtn.onclick = () => {
-    userDropdown?.classList.remove('open'); userBackdrop?.classList.remove('open')
     const wid = hierarchyStore.selectedWorkspaceId ?? 1
     import('./ui/modals').then(({ showPermissionModal }) => showPermissionModal('workspace', wid))
   }
 
-  const agentMenuBtn = document.getElementById('menu-agent-panel')
-  if (agentMenuBtn) {
-    agentMenuBtn.onclick = () => {
-      userDropdown?.classList.remove('open'); userBackdrop?.classList.remove('open')
+  const agentPanelBtn = document.getElementById('sidebar-agent-panel-btn')
+  if (agentPanelBtn) {
+    agentPanelBtn.onclick = () => {
       const ap = document.getElementById('agent-panel')
       if (ap) {
         const visible = ap.style.display === 'block'
@@ -397,16 +367,6 @@ function wireTopNav(): void {
       })
     }
   }
-
-  // Header nav-item buttons (SESSIONS / DASHBOARD)
-  document.querySelectorAll('.top-nav .nav-item').forEach(el => {
-    el.addEventListener('click', () => {
-      document.querySelectorAll('.top-nav .nav-item').forEach(b => b.classList.remove('active'))
-      el.classList.add('active')
-      const view = (el as HTMLElement).dataset.view || 'sessions'
-      switchView(view)
-    })
-  })
 }
 
 // ── Sidebar view switching ──
@@ -416,10 +376,6 @@ function wireSidebarNav(): void {
       document.querySelectorAll('.side-nav-item').forEach(b => b.classList.remove('active'))
       el.classList.add('active')
       const view = (el as HTMLElement).dataset.view || 'sessions'
-      // Sync header nav-item active state
-      document.querySelectorAll('.top-nav .nav-item').forEach(b => b.classList.remove('active'))
-      const headerNav = document.getElementById('nav-' + view + '-btn')
-      if (headerNav) headerNav.classList.add('active')
       switchView(view)
     })
   })
@@ -430,13 +386,10 @@ function switchView(view: string): void {
   document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'))
   const panel = document.getElementById('view-' + view)
   if (panel) panel.classList.add('active')
-  // Sync sidebar + header nav active state
+  // Sync sidebar active state only
   document.querySelectorAll('.side-nav-item').forEach(b => b.classList.remove('active'))
-  document.querySelectorAll('.top-nav .nav-item').forEach(b => b.classList.remove('active'))
   const sideNav = document.querySelector(`.side-nav-item[data-view="${view}"]`)
-  const headerNav = document.getElementById('nav-' + view + '-btn')
   if (sideNav) sideNav.classList.add('active')
-  if (headerNav) headerNav.classList.add('active')
   if (view === 'dashboard') renderDashboard()
   if (view === 'agents') renderAgentsPanel()
   if (view === 'story-detail' && currentStoryId) renderStoryDetailPanel()
@@ -493,46 +446,29 @@ function renderTopNav(): void {
     })
   }
 
-  // User avatar in header
-  const uav = document.getElementById('user-avatar')
-  const uavLg = document.getElementById('user-avatar-lg')
-  const ufull = document.getElementById('user-fullname')
+  // User info in sidebar footer
+  const sidebarAvatar = document.getElementById('sidebar-user-avatar')
+  const sidebarName = document.getElementById('sidebar-user-name')
   if (authStore.user) {
     const un = authStore.user.username
     const initial = un.charAt(0).toUpperCase()
-    if (uav) uav.textContent = initial
-    if (uavLg) uavLg.textContent = initial
-    if (ufull) ufull.textContent = un
+    if (sidebarAvatar) sidebarAvatar.textContent = initial
+    if (sidebarName) sidebarName.textContent = un
   }
 
-  // Active count
-  const active = Object.values(sessionsStore.sessions).filter(s => s.status === 'active').length
-
-  // Sessions badge + sidebar status
+  // Sessions badge
   const total = Object.keys(sessionsStore.sessions).length
   const badgeEl = document.getElementById('sess-badge')
   if (badgeEl) badgeEl.textContent = String(total)
   const listCount = document.getElementById('list-count')
   if (listCount) listCount.textContent = String(total)
-
-  const activeLabel = document.getElementById('sidebar-active-label')
-  if (activeLabel) activeLabel.textContent = `${active} active`
-  const totalLabel = document.getElementById('sidebar-total-label')
-  if (totalLabel) totalLabel.textContent = `${total} total`
 }
 
+let sseConnectionStatus: SSEStatus = 'disconnected'
+
 function updateConnIndicator(status: SSEStatus): void {
-  const live = status === 'connected'
-  // Sidebar daemon status dot
-  const sDot = document.querySelector('#sidebar-daemon .status-dot') as HTMLElement | null
-  if (sDot) {
-    sDot.classList.remove('active', 'error')
-    sDot.classList.add(live ? 'active' : 'error')
-  }
-  const sAddr = document.querySelector('#sidebar-daemon') as HTMLElement | null
-  if (sAddr && sAddr.childNodes.length > 1) {
-    sAddr.childNodes[1].textContent = live ? ' daemon :9101' : ' daemon reconnecting…'
-  }
+  sseConnectionStatus = status
+  if (currentView === 'dashboard') renderDashboard()
 }
 
 // JS hover tracking for filter pills — survives innerHTML rebuilds.
@@ -630,8 +566,8 @@ function renderAgentsPanel(): void {
 
 function renderDashboard(): void {
   if (currentView !== 'dashboard') return
-  const statsRow = document.getElementById('stats-row')
-  if (!statsRow) return
+  const statusGrid = document.getElementById('dashboard-status')
+  if (!statusGrid) return
   const sessions = Object.values(sessionsStore.sessions)
   const active = sessions.filter(s => s.status === 'active').length
   const totalTurns = sessions.reduce((sum, s) => sum + (s.turn_count || 0), 0)
@@ -639,11 +575,50 @@ function renderDashboard(): void {
   const uptime = formatUptime(Date.now() - pageLoadTime)
   const avgTurns = sessions.length > 0 ? (totalTurns / sessions.length).toFixed(1) : '0.0'
 
-  statsRow.innerHTML = `
-    <div class="stat-card"><div class="stat-label">Active Sessions</div><div class="stat-value green">${active}</div><div class="stat-sub">${sessions.length} total monitored</div></div>
-    <div class="stat-card"><div class="stat-label">Total Turns</div><div class="stat-value">${totalTurns}</div><div class="stat-sub">avg ${avgTurns} per session</div></div>
-    <div class="stat-card"><div class="stat-label">Errors</div><div class="stat-value${errors > 0 ? ' magenta' : ''}">${errors}</div><div class="stat-sub">${errors > 0 ? 'needs attention' : 'all healthy'}</div></div>
-    <div class="stat-card"><div class="stat-label">Uptime</div><div class="stat-value orange">${uptime}</div><div class="stat-sub">page session</div></div>`
+  // Connection status
+  const isConnected = sseConnectionStatus === 'connected'
+  const connLabel = isConnected ? '● Connected' : sseConnectionStatus === 'connecting' ? '⟳ Connecting' : '○ Disconnected'
+  const connColor = isConnected ? 'green' : sseConnectionStatus === 'connecting' ? 'orange' : 'magenta'
+
+  // Capabilities
+  const caps = registryStore.capabilities || []
+  const capsAvailable = caps.filter(c => c.available).length
+  const capsTotal = caps.length
+  const capsDetail = capsTotal > 0
+    ? caps.map(c => `${c.provider} ${c.available ? '✓' : '✗'}`).join(' · ')
+    : 'No capabilities detected'
+
+  statusGrid.innerHTML = `
+    <div class="status-card">
+      <div class="status-card-label">Connection</div>
+      <div class="status-card-value ${connColor}">${connLabel}</div>
+      <div class="stat-sub">SSE ${sseConnectionStatus}</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Active Sessions</div>
+      <div class="status-card-value green">${active}</div>
+      <div class="stat-sub">${sessions.length} total monitored</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Total Turns</div>
+      <div class="status-card-value">${totalTurns}</div>
+      <div class="stat-sub">avg ${avgTurns} per session</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Errors</div>
+      <div class="status-card-value${errors > 0 ? ' magenta' : ''}">${errors}</div>
+      <div class="stat-sub">${errors > 0 ? 'needs attention' : 'all healthy'}</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Uptime</div>
+      <div class="status-card-value orange">${uptime}</div>
+      <div class="stat-sub">page session</div>
+    </div>
+    <div class="status-card">
+      <div class="status-card-label">Capabilities</div>
+      <div class="status-card-value ${capsAvailable > 0 ? 'green' : ''}">${capsAvailable}/${capsTotal}</div>
+      <div class="stat-sub">${esc(capsDetail)}</div>
+    </div>`
 
   // Recent activity
   const recent = document.getElementById('recent-activity')
@@ -651,17 +626,39 @@ function renderDashboard(): void {
   const sorted = [...sessions].sort((a, b) => b.last_event_time_ms - a.last_event_time_ms).slice(0, 6)
   if (sorted.length === 0) {
     recent.innerHTML = '<div class="empty-state"><p>No recent activity</p></div>'
-    return
+  } else {
+    recent.innerHTML = sorted.map(s => {
+      const statusColor = s.status === 'active' ? 'var(--success)' : s.status === 'idle' ? 'var(--warning)' : s.status === 'stopped' ? 'var(--text-disabled)' : 'var(--danger)'
+      const glow = s.status === 'active' ? 'box-shadow:0 0 6px var(--success-glow)' : ''
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card-bg);border:1px solid var(--border-hairline);box-shadow:var(--pixel-shadow) var(--pixel-border-dark);margin-bottom:var(--space-2)">
+        <span style="width:8px;height:8px;flex-shrink:0;background:${statusColor};${glow}"></span>
+        <span style="font-size:13px;color:var(--text-secondary);flex:1"><strong style="color:var(--text-primary);font-weight:600">${esc(s.agent_type)}</strong> · ${esc(s.session_title || s.agent_session_id)}${s.turn_count ? ' — Turn ' + s.turn_count : ''}</span>
+        <span style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono)">${formatRelTime(s.last_event_time_ms)}</span>
+      </div>`
+    }).join('')
   }
-  recent.innerHTML = sorted.map(s => {
-    const statusColor = s.status === 'active' ? 'var(--success)' : s.status === 'idle' ? 'var(--warning)' : s.status === 'stopped' ? 'var(--text-disabled)' : 'var(--danger)'
-    const glow = s.status === 'active' ? 'box-shadow:0 0 6px var(--success-glow)' : ''
-    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card-bg);border:1px solid var(--border-hairline);box-shadow:var(--pixel-shadow) var(--pixel-border-dark);margin-bottom:var(--space-2)">
-      <span style="width:8px;height:8px;flex-shrink:0;background:${statusColor};${glow}"></span>
-      <span style="font-size:13px;color:var(--text-secondary);flex:1"><strong style="color:var(--text-primary);font-weight:600">${esc(s.agent_type)}</strong> · ${esc(s.session_title || s.agent_session_id)}${s.turn_count ? ' — Turn ' + s.turn_count : ''}</span>
-      <span style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono)">${formatRelTime(s.last_event_time_ms)}</span>
-    </div>`
-  }).join('')
+
+  // Recent story runs
+  const runsContainer = document.getElementById('recent-story-runs')
+  if (!runsContainer) return
+  const allRuns: StoryRun[] = []
+  for (const runs of Object.values(registryStore.runsByStory)) {
+    for (const run of runs) allRuns.push(run)
+  }
+  allRuns.sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
+  const recentRuns = allRuns.slice(0, 6)
+  if (recentRuns.length === 0) {
+    runsContainer.innerHTML = '<div class="empty-state"><p>No recent story runs</p></div>'
+  } else {
+    runsContainer.innerHTML = recentRuns.map(r => {
+      const statusColor = r.status === 'running' ? 'var(--success)' : r.status === 'completed' ? 'var(--neon-cyan)' : r.status === 'failed' ? 'var(--danger)' : 'var(--text-tertiary)'
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card-bg);border:1px solid var(--border-hairline);box-shadow:var(--pixel-shadow) var(--pixel-border-dark);margin-bottom:var(--space-2)">
+        <span style="width:8px;height:8px;flex-shrink:0;background:${statusColor}"></span>
+        <span style="font-size:13px;color:var(--text-secondary);flex:1">${esc(r.prompt || r.provider + ' run')}</span>
+        <span style="font-size:11px;color:var(--text-tertiary);font-family:var(--font-mono)">${r.status}</span>
+      </div>`
+    }).join('')
+  }
 }
 
 /** Format an elapsed ms duration as a human-readable uptime string. */
@@ -709,6 +706,11 @@ authStore.subscribe(() => {
     sse.close(); sse = null
   }
 })
+
+/** Test-only helper: renders the shell into the current DOM. */
+export function renderAppShellForTest(): void {
+  renderShell()
+}
 
 renderShell()
 wireUnauthorizedAutoLogout()
